@@ -1,0 +1,4 @@
+# Optional: copy to db.properties at the project root. This file is ignored by Git.
+clinic.db.url=jdbc:mysql://localhost:3306/clinic_tps?serverTimezone=Asia/Manila
+clinic.db.user=root
+clinic.db.password=

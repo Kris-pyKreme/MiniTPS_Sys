@@ -1,261 +1,80 @@
 package gui;
 
-import database.DBConnection;
+import security.*;
+import service.AccountService;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.util.Arrays;
 import javax.swing.*;
 
-/**
- * Staff login with a split layout: brand panel (left) + form (right).
- * Opens MainFrame only after the credentials are verified against staff_users.
- */
 public class Login extends JFrame {
-
-    private static final int MAX_ATTEMPTS = 3;
-    private static final Color TEAL        = new Color(0x035B63);
-    private static final Color TEAL_LIGHT  = new Color(0x1E8A7E);
-    private static final Color ORANGE      = new Color(0xF26B2B);
-    private static final Color FIELD_LINE  = new Color(0xC8C8C8);
-
-    private final JTextField txtUser = new JTextField();
-    private final JPasswordField txtPass = new JPasswordField();
-    private final JCheckBox chkShow = new JCheckBox("Show password");
-    private final FlatButton btnLogin = new FlatButton("LOGIN", TEAL, new Color(0x047A85));
-    private final char defaultEcho = txtPass.getEchoChar();
-    private int attempts = 0;
+    private final JTextField txtUser=new JTextField();
+    private final JPasswordField txtPass=new JPasswordField();
+    private final JComboBox<Role> cmbRole=new JComboBox<>(Role.values());
+    private final JButton btnLogin=Theme.primary("Sign in to your workspace   →");
+    private final JLabel message=Theme.label(" ",12,new Color(0xB34747),false);
+    private final AccountService accounts=new AccountService();
+    private int failures;
+    private long retryAfter;
 
     public Login() {
-        super("Clinic TPS - Staff Login");
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setResizable(false);
-
-        JPanel root = new JPanel(new GridLayout(1, 2));
-        root.setPreferredSize(new Dimension(760, 410));
-        root.add(buildBrandPanel());
-        root.add(buildFormPanel());
-        setContentPane(root);
-
-        getRootPane().setDefaultButton(btnLogin);   // Enter key = Login
-        chkShow.addActionListener(e -> txtPass.setEchoChar(chkShow.isSelected() ? (char) 0 : defaultEcho));
-        btnLogin.addActionListener(e -> doLogin());
-
-        pack();
-        setLocationRelativeTo(null);
+        super("ClinicFlow · Staff sign in");
+        setDefaultCloseOperation(EXIT_ON_CLOSE); setSize(1040,650); setMinimumSize(new Dimension(930,620)); setLocationRelativeTo(null);
+        JPanel root=new JPanel(new GridLayout(1,2)); root.setBackground(Color.WHITE);
+        JPanel brand=new JPanel(new BorderLayout(0,18)); brand.setBackground(new Color(0xEDF7F4)); brand.setBorder(BorderFactory.createEmptyBorder(38,38,30,38));
+        JPanel logo=new JPanel(new FlowLayout(FlowLayout.LEFT,10,0)); logo.setOpaque(false);
+        JLabel cross=Theme.label("✚",30,Theme.TEAL,true);logo.add(cross);logo.add(Theme.label("ClinicFlow",23,Theme.INK,true));brand.add(logo,BorderLayout.NORTH);
+        JPanel story=Theme.column();
+        story.add(Box.createVerticalGlue());
+        JLabel kicker=Theme.label("A LITTLE MORE CARE. EVERY DAY.",10,Theme.TEAL,true);kicker.setAlignmentX(0);story.add(kicker);story.add(Box.createVerticalStrut(16));
+        JLabel title=Theme.label("<html>Better care starts<br>with a better flow.</html>",33,Theme.INK,true);title.setAlignmentX(0);story.add(title);story.add(Box.createVerticalStrut(14));
+        JLabel copy=Theme.label("<html>One connected space for your patients,<br>your team, and every step of their care.</html>",14,Theme.MUTED,false);copy.setAlignmentX(0);story.add(copy);
+        ClinicArt art=new ClinicArt();art.setAlignmentX(0);story.add(art);story.add(Box.createVerticalGlue());brand.add(story,BorderLayout.CENTER);
+        brand.add(Theme.label("PATIENTS   /   APPOINTMENTS   /   CARE",10,Theme.TEAL,true),BorderLayout.SOUTH);
+        root.add(brand);
+        JPanel right=new JPanel(new GridBagLayout());right.setBackground(Color.WHITE);right.setBorder(BorderFactory.createEmptyBorder(24,42,24,42));
+        JPanel form=Theme.column();form.setMaximumSize(new Dimension(350,600));
+        form.add(Theme.label("STAFF PORTAL",10,Theme.TEAL,true));form.add(Box.createVerticalStrut(13));
+        form.add(Theme.label("Welcome back",29,Theme.INK,true));form.add(Box.createVerticalStrut(8));
+        form.add(Theme.label("Sign in to continue caring for your community.",12,Theme.MUTED,false));form.add(Box.createVerticalStrut(26));
+        field(form,"Your role",cmbRole);field(form,"Username",txtUser);field(form,"Password",txtPass);
+        txtUser.putClientProperty("JTextField.placeholderText","Enter your username");txtPass.putClientProperty("JTextField.placeholderText","Enter your password");
+        JCheckBox show=new JCheckBox("Show password");show.setOpaque(false);show.setForeground(Theme.MUTED);show.addActionListener(e->txtPass.setEchoChar(show.isSelected()?(char)0:'•'));form.add(show);
+        JButton forgot=new JButton("Forgot password? Contact your administrator");forgot.setBorderPainted(false);forgot.setContentAreaFilled(false);forgot.setForeground(Theme.TEAL);forgot.setFont(forgot.getFont().deriveFont(11f));forgot.setMargin(new Insets(6,0,6,0));forgot.addActionListener(e->requestReset());form.add(forgot);
+        message.setPreferredSize(new Dimension(350,36));message.setMaximumSize(new Dimension(400,36));form.add(message);
+        btnLogin.setMaximumSize(new Dimension(Integer.MAX_VALUE,46));btnLogin.setAlignmentX(0);btnLogin.addActionListener(e->doLogin());form.add(btnLogin);form.add(Box.createVerticalStrut(21));
+        form.add(Theme.label("Staff accounts are managed by your clinic administrator.",10,Theme.MUTED,false));
+        for(Component c:form.getComponents()) if(c instanceof JComponent)((JComponent)c).setAlignmentX(0);
+        right.add(form);root.add(right);setContentPane(root);getRootPane().setDefaultButton(btnLogin);
+        txtUser.setName("username");txtPass.setName("password");cmbRole.setName("role");btnLogin.setName("signIn");
     }
-
-    // ---------------------------------------------------------------- left side
-    private JPanel buildBrandPanel() {
-        JPanel p = new JPanel(new BorderLayout());
-        p.setBackground(TEAL);
-
-        JPanel center = new JPanel();
-        center.setOpaque(false);
-        center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
-
-        LogoPanel logo = new LogoPanel();
-        logo.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JLabel name = new JLabel("CLINIC TPS");
-        name.setFont(name.getFont().deriveFont(Font.BOLD, 26f));
-        name.setForeground(Color.WHITE);
-        name.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JLabel tag = new JLabel("Appointment & Billing System");
-        tag.setFont(tag.getFont().deriveFont(12f));
-        tag.setForeground(new Color(0xBFE3E6));
-        tag.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        center.add(Box.createVerticalGlue());
-        center.add(logo);
-        center.add(Box.createVerticalStrut(14));
-        center.add(name);
-        center.add(Box.createVerticalStrut(4));
-        center.add(tag);
-        center.add(Box.createVerticalGlue());
-
-        JLabel copy = new JLabel("\u00A9 Clinic TPS. All rights reserved.", SwingConstants.CENTER);
-        copy.setFont(copy.getFont().deriveFont(11f));
-        copy.setForeground(new Color(0x8FBFC4));
-        copy.setBorder(BorderFactory.createEmptyBorder(0, 0, 18, 0));
-
-        p.add(center, BorderLayout.CENTER);
-        p.add(copy, BorderLayout.SOUTH);
-        return p;
+    private void field(JPanel p,String label,JComponent field) {
+        p.add(Theme.label(label,12,Theme.INK,true));p.add(Box.createVerticalStrut(7));
+        field.setPreferredSize(new Dimension(350,42));field.setMaximumSize(new Dimension(Integer.MAX_VALUE,42));p.add(field);p.add(Box.createVerticalStrut(16));
     }
-
-    // --------------------------------------------------------------- right side
-    private JPanel buildFormPanel() {
-        JPanel p = new JPanel(new GridBagLayout());
-        p.setBackground(Color.WHITE);
-        p.setBorder(BorderFactory.createEmptyBorder(24, 40, 24, 40));
-
-        GridBagConstraints g = new GridBagConstraints();
-        g.gridx = 0;
-        g.weightx = 1;
-        g.fill = GridBagConstraints.HORIZONTAL;
-        g.anchor = GridBagConstraints.WEST;
-        int y = 0;
-
-        JLabel title = new JLabel("STAFF LOGIN", SwingConstants.CENTER);
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 24f));
-        g.gridy = y++; g.insets = new Insets(0, 0, 26, 0);
-        p.add(title, g);
-
-        g.gridy = y++; g.insets = new Insets(0, 0, 4, 0);
-        p.add(fieldLabel("Username"), g);
-        styleField(txtUser);
-        g.gridy = y++; g.insets = new Insets(0, 0, 14, 0);
-        p.add(txtUser, g);
-
-        g.gridy = y++; g.insets = new Insets(0, 0, 4, 0);
-        p.add(fieldLabel("Password"), g);
-        styleField(txtPass);
-        g.gridy = y++; g.insets = new Insets(0, 0, 6, 0);
-        p.add(txtPass, g);
-
-        chkShow.setOpaque(false);
-        chkShow.setFocusPainted(false);
-        chkShow.setFont(chkShow.getFont().deriveFont(11f));
-        g.gridy = y++; g.insets = new Insets(0, 0, 14, 0);
-        p.add(chkShow, g);
-
-        btnLogin.setPreferredSize(new Dimension(0, 40));
-        g.gridy = y++; g.insets = new Insets(0, 0, 14, 0);
-        p.add(btnLogin, g);
-
-        JLabel hint = new JLabel("Forgot your password? Contact the administrator.");
-        hint.setFont(hint.getFont().deriveFont(11f));
-        hint.setForeground(Color.GRAY);
-        g.gridy = y++; g.insets = new Insets(0, 0, 0, 0);
-        p.add(hint, g);
-        return p;
-    }
-
-    private JLabel fieldLabel(String text) {
-        JLabel l = new JLabel(text);
-        l.setFont(l.getFont().deriveFont(12f));
-        return l;
-    }
-
-    private void styleField(JTextField f) {
-        f.setPreferredSize(new Dimension(0, 36));
-        f.setBackground(Color.WHITE);
-        f.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(FIELD_LINE),
-                BorderFactory.createEmptyBorder(0, 10, 0, 10)));
-    }
-
-    // ------------------------------------------------------------------- logic
     private void doLogin() {
-        String user = txtUser.getText().trim();
-        char[] pass = txtPass.getPassword();
-        try {
-            if (user.isEmpty() || pass.length == 0) {
-                GuiUtil.error(this, "Enter your username and password.");
-                return;
+        if(System.currentTimeMillis()<retryAfter){message.setText("Please wait a moment before trying again.");return;}
+        char[] password=txtPass.getPassword();
+        if(txtUser.getText().trim().isEmpty()||password.length==0){message.setText("Enter your username and password.");Arrays.fill(password,'\0');return;}
+        String username=txtUser.getText().trim();Role role=(Role)cmbRole.getSelectedItem();btnLogin.setEnabled(false);message.setText("Signing in…");
+        new SwingWorker<User,Void>() {
+            @Override protected User doInBackground() throws Exception {try{return accounts.authenticate(username,password,role);}finally{Arrays.fill(password,'\0');}}
+            @Override protected void done(){
+                btnLogin.setEnabled(true);txtPass.setText("");
+                try {
+                    User user=get();
+                    if(user==null){failures++;if(failures>=3){retryAfter=System.currentTimeMillis()+30000;failures=0;}message.setText("Check your username, password, and selected role.");return;}
+                    Session.login(user);MainFrame main=new MainFrame();main.setVisible(true);dispose();
+                }catch(Exception ex){message.setText("Sign in failed. Check your database connection.");GuiUtil.error(Login.this,ex.getCause()==null?ex.getMessage():ex.getCause().getMessage());}
             }
-            String[] staff = authenticate(user, new String(pass));
-            if (staff != null) {
-                dispose();
-                MainFrame main = new MainFrame();
-                main.setTitle(main.getTitle() + "  |  Logged in: " + staff[0] + " (" + staff[1] + ")");
-                main.setVisible(true);
-            } else {
-                attempts++;
-                txtPass.setText("");
-                if (attempts >= MAX_ATTEMPTS) {
-                    GuiUtil.error(this, "Too many failed attempts. The application will now close.");
-                    System.exit(0);
-                }
-                GuiUtil.error(this, "Invalid username or password. Attempts left: " + (MAX_ATTEMPTS - attempts));
-            }
-        } catch (SQLException ex) {
-            GuiUtil.error(this, "Cannot reach the database.\nCheck MySQL is running and DBConnection.java settings.\n\n"
-                    + ex.getMessage());
-        } finally {
-            java.util.Arrays.fill(pass, '\0');   // wipe password from memory
-        }
+        }.execute();
     }
-
-    /** Returns {full_name, role} if the credentials match, otherwise null. */
-    private String[] authenticate(String username, String password) throws SQLException {
-        String sql = "SELECT full_name, role FROM staff_users "
-                   + "WHERE username=? AND password_hash=SHA2(CONCAT(salt,?),256)";
-        try (Connection c = DBConnection.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
-            ps.setString(1, username);
-            ps.setString(2, password);
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() ? new String[]{rs.getString(1), rs.getString(2)} : null;
-            }
-        }
-    }
-
-    // ------------------------------------------------------------ custom pieces
-    /** Simple drawn logo (medical cross) so no image file is needed. Swap for an ImageIcon if you have one. */
-    private static class LogoPanel extends JPanel {
-        LogoPanel() {
-            setOpaque(false);
-            Dimension d = new Dimension(120, 120);
-            setPreferredSize(d);
-            setMinimumSize(d);
-            setMaximumSize(d);
-        }
-
-        @Override
-        protected void paintComponent(Graphics g0) {
-            Graphics2D g = (Graphics2D) g0.create();
-            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            int cx = getWidth() / 2, cy = getHeight() / 2;
-            g.setColor(TEAL_LIGHT);
-            g.fillOval(cx - 54, cy - 54, 108, 108);
-            g.setColor(ORANGE);
-            g.fillRoundRect(cx - 14, cy - 40, 28, 80, 12, 12);   // vertical bar
-            g.fillRoundRect(cx - 40, cy - 14, 80, 28, 12, 12);   // horizontal bar
-            g.dispose();
-        }
-    }
-
-    /** Flat rounded button (Nimbus ignores setBackground on normal buttons, so we paint it ourselves). */
-    private static class FlatButton extends JButton {
-        private final Color base, hover;
-        private boolean over;
-
-        FlatButton(String text, Color base, Color hover) {
-            super(text);
-            this.base = base;
-            this.hover = hover;
-            setContentAreaFilled(false);
-            setBorderPainted(false);
-            setFocusPainted(false);
-            setOpaque(false);
-            setForeground(Color.WHITE);
-            setFont(getFont().deriveFont(Font.BOLD, 13f));
-            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            addMouseListener(new MouseAdapter() {
-                @Override public void mouseEntered(MouseEvent e) { over = true; repaint(); }
-                @Override public void mouseExited(MouseEvent e)  { over = false; repaint(); }
-            });
-        }
-
-        @Override
-        protected void paintComponent(Graphics g0) {
-            Graphics2D g = (Graphics2D) g0.create();
-            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-            g.setColor(over ? hover : base);
-            g.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
-            g.setColor(getForeground());
-            g.setFont(getFont());
-            FontMetrics fm = g.getFontMetrics();
-            int x = (getWidth() - fm.stringWidth(getText())) / 2;
-            int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
-            g.drawString(getText(), x, y);
-            g.dispose();
-        }
+    private void requestReset() {
+        String username=txtUser.getText().trim();
+        if(username.isEmpty()){message.setText("Enter your username and select your role first.");return;}
+        Role role=(Role)cmbRole.getSelectedItem();
+        new SwingWorker<Void,Void>() {
+            @Override protected Void doInBackground() throws Exception {accounts.requestReset(username,role);return null;}
+            @Override protected void done(){try{get();GuiUtil.info(Login.this,"If the account matches, a request is now in the administrator’s dashboard.\nContact your clinic administrator to receive your new password.");}catch(Exception ex){GuiUtil.error(Login.this,"Could not send your request. Check the database connection.");}}
+        }.execute();
     }
 }

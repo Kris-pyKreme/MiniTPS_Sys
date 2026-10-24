@@ -4,6 +4,7 @@ import dao.AppointmentDAO;
 import dao.PatientDAO;
 import gui.GuiUtil.Item;
 import java.awt.*;
+import security.*;
 import java.sql.Date;
 import java.sql.SQLException;
 import java.sql.Time;
@@ -21,7 +22,7 @@ public class AppointmentPanel extends JPanel implements GuiUtil.Refreshable {
     private final JComboBox<String> cmbStatus =
             new JComboBox<>(new String[]{"Scheduled", "Completed", "Cancelled", "No-show"});
     private final DefaultTableModel model = GuiUtil.tableModel(
-            "ID", "Patient", "Doctor", "Date", "Time", "Status", "Reason");
+            "ID", "Patient", "Doctor", "Date", "Time", "Status", "Reason", "Booked On");
     private final JTable table = new JTable(model);
 
     public AppointmentPanel() {
@@ -43,6 +44,11 @@ public class AppointmentPanel extends JPanel implements GuiUtil.Refreshable {
                 btnDelete = new JButton("Delete"), btnClear = new JButton("Clear"),
                 btnSearch = new JButton("Search"), btnAll = new JButton("Show All");
 
+        boolean editable = Session.current().role.booksAppointments();
+        btnAdd.setVisible(editable); btnUpdate.setVisible(editable); btnClear.setVisible(editable);
+        btnDelete.setVisible(Session.current().role == Role.ADMIN);
+        if (!editable) form.setVisible(false);
+
         JPanel top = new JPanel(new BorderLayout());
         top.add(form, BorderLayout.CENTER);
         top.add(GuiUtil.buttonBar(btnAdd, btnUpdate, btnDelete, btnClear), BorderLayout.SOUTH);
@@ -53,6 +59,7 @@ public class AppointmentPanel extends JPanel implements GuiUtil.Refreshable {
 
         add(top, BorderLayout.NORTH);
         add(center, BorderLayout.CENTER);
+        Theme.polish(this);
 
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.getSelectionModel().addListSelectionListener(e -> { if (!e.getValueIsAdjusting()) loadSelected(); });
@@ -70,7 +77,7 @@ public class AppointmentPanel extends JPanel implements GuiUtil.Refreshable {
         try {
             GuiUtil.fillCombo(cmbPatient, patientDao.forCombo());
             GuiUtil.fillCombo(cmbDoctor, dao.doctorsForCombo());
-        } catch (SQLException ex) {
+        } catch (SQLException | SecurityException ex) {
             GuiUtil.error(this, "Database error: " + ex.getMessage());
         }
         loadTable();
@@ -79,7 +86,7 @@ public class AppointmentPanel extends JPanel implements GuiUtil.Refreshable {
     private void loadTable() {
         try {
             GuiUtil.fill(model, dao.getAll(txtSearch.getText().trim()));
-        } catch (SQLException ex) {
+        } catch (SQLException | SecurityException ex) {
             GuiUtil.error(this, "Database error: " + ex.getMessage());
         }
     }
@@ -113,7 +120,7 @@ public class AppointmentPanel extends JPanel implements GuiUtil.Refreshable {
             loadTable();
         } catch (IllegalArgumentException ex) {
             GuiUtil.error(this, GuiUtil.FORMAT_MSG);
-        } catch (SQLException ex) {
+        } catch (SQLException | SecurityException ex) {
             GuiUtil.error(this, "Database error: " + ex.getMessage());
         }
     }
@@ -125,7 +132,7 @@ public class AppointmentPanel extends JPanel implements GuiUtil.Refreshable {
             dao.delete(Integer.parseInt(txtId.getText()));
             clear();
             loadTable();
-        } catch (SQLException ex) {
+        } catch (SQLException | SecurityException ex) {
             GuiUtil.error(this, "Database error: " + ex.getMessage());
         }
     }

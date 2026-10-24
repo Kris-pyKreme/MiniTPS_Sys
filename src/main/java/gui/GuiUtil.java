@@ -68,13 +68,20 @@ public class GuiUtil {
 
     public static JPanel buttonBar(JButton... buttons) {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 6));
-        for (JButton b : buttons) p.add(b);
+        for (int i=0;i<buttons.length;i++) {
+            JButton b=buttons[i];
+            if(i==0){b.setBackground(Theme.TEAL);b.setForeground(Color.WHITE);b.setFont(b.getFont().deriveFont(Font.BOLD));}
+            if("Delete".equals(b.getText()))b.setForeground(new Color(0xB34747));
+            p.add(b);
+        }
         return p;
     }
 
     public static JPanel searchBar(JTextField txt, JButton... buttons) {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 6));
         p.add(new JLabel("Search:"));
+        txt.putClientProperty("JTextField.placeholderText","Search records…");
+        if(buttons.length>0)txt.addActionListener(e->buttons[0].doClick());
         p.add(txt);
         for (JButton b : buttons) p.add(b);
         return p;
@@ -88,12 +95,14 @@ public class GuiUtil {
         });
     }
 
-    public static java.sql.Date date(String s) { return java.sql.Date.valueOf(s.trim()); }
+    public static java.sql.Date date(String s) { try { return java.sql.Date.valueOf(java.time.LocalDate.parse(s.trim())); }
+        catch (java.time.DateTimeException e) { throw new IllegalArgumentException("Invalid date", e); } }
 
     public static java.sql.Time time(String s) {
-        s = s.trim();
-        if (s.length() == 5) s += ":00";
-        return java.sql.Time.valueOf(s);
+        try {
+            java.time.LocalTime t = java.time.LocalTime.parse(s.trim(), java.time.format.DateTimeFormatter.ofPattern("HH:mm").withResolverStyle(java.time.format.ResolverStyle.STRICT));
+            return java.sql.Time.valueOf(t);
+        } catch(java.time.DateTimeException e) { throw new IllegalArgumentException("Invalid time",e); }
     }
 
     public static String str(Object o) { return o == null ? "" : o.toString(); }

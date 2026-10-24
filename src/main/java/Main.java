@@ -1,31 +1,18 @@
-import database.DBConnection;
-import gui.Login;
-import java.sql.Connection;
+import database.DatabaseSetup;
+import gui.*;
 import javax.swing.*;
 
 public class Main {
-
     public static void main(String[] args) {
+        java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("Asia/Manila"));
+        Theme.install();
         try {
-            for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (Exception ignored) { }
-
-        // Fail early with a clear message if MySQL isn't reachable
-        try (Connection c = DBConnection.getConnection()) {
-            // connection OK
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(null,
-                    "Cannot connect to the database.\n\nCheck that MySQL is running, schema.sql has been run,\n"
-                  + "and the URL/user/password in DBConnection.java are correct.\n\n" + ex.getMessage(),
-                    "Clinic TPS", JOptionPane.ERROR_MESSAGE);
+            DatabaseSetup.upgrade();
+        } catch(Exception ex) {
+            JOptionPane.showMessageDialog(null,"Cannot prepare the clinic database.\nStart MySQL in XAMPP and import database/schema.sql and database/staff_users.sql.\n"
+                    + "Check db.properties if your connection differs from localhost / root.\n\n"+ex.getMessage(),"ClinicFlow",JOptionPane.ERROR_MESSAGE);
             return;
         }
-
-        SwingUtilities.invokeLater(() -> new Login().setVisible(true));
+        SwingUtilities.invokeLater(()->new Login().setVisible(true));
     }
 }

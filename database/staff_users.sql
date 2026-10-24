@@ -5,18 +5,21 @@ CREATE TABLE IF NOT EXISTS staff_users (
     user_id       INT AUTO_INCREMENT PRIMARY KEY,
     username      VARCHAR(50)  NOT NULL UNIQUE,
     salt          VARCHAR(32)  NOT NULL,
-    password_hash CHAR(64)     NOT NULL,          -- SHA-256 of (salt + password), never plain text
+    password_hash CHAR(64)     NOT NULL,          -- legacy seed hash; upgraded to PBKDF2 on login
     full_name     VARCHAR(100) NOT NULL,
-    role          ENUM('Admin','Receptionist','Doctor','Cashier') DEFAULT 'Receptionist'
+    role          ENUM('Admin','Doctor','Nurse','Receptionist','Cashier') DEFAULT 'Receptionist'
 );
 
--- Default accounts (change these passwords before your demo/submission!)
+-- Existing passwords are preserved when this file is imported again.
+-- Default development accounts (reset these in Admin > Staff & requests before use):
 --   admin  / admin123
 --   staff1 / staff123
 INSERT INTO staff_users (username, salt, password_hash, full_name, role) VALUES
  ('admin',  'a1b2c3', SHA2(CONCAT('a1b2c3','admin123'),256), 'System Administrator', 'Admin'),
- ('staff1', 'd4e5f6', SHA2(CONCAT('d4e5f6','staff123'),256), 'Front Desk Staff',     'Receptionist');
+ ('staff1', 'd4e5f6', SHA2(CONCAT('d4e5f6','staff123'),256), 'Front Desk Staff',     'Receptionist')
+ON DUPLICATE KEY UPDATE username=staff_users.username;
 
--- To add another staff member later:
--- INSERT INTO staff_users (username, salt, password_hash, full_name, role)
--- VALUES ('nurse1', 'x9y8z7', SHA2(CONCAT('x9y8z7','theirPassword'),256), 'Nurse Joy', 'Receptionist');
+-- Add staff through Admin > Staff & requests so passwords use PBKDF2.
+
+-- Main automatically adds doctor_id, password_scheme, credential_version, and
+-- password_requests on first launch. Create Doctor/Nurse accounts in the Admin workspace.

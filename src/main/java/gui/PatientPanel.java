@@ -2,6 +2,7 @@ package gui;
 
 import dao.PatientDAO;
 import java.awt.*;
+import security.*;
 import java.sql.SQLException;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -38,6 +39,11 @@ public class PatientPanel extends JPanel implements GuiUtil.Refreshable {
                 btnDelete = new JButton("Delete"), btnClear = new JButton("Clear"),
                 btnSearch = new JButton("Search"), btnAll = new JButton("Show All");
 
+        boolean editable = Session.current().role.registersPatients();
+        btnAdd.setVisible(editable); btnUpdate.setVisible(editable); btnClear.setVisible(editable);
+        btnDelete.setVisible(Session.current().role == Role.ADMIN);
+        if (!editable) form.setVisible(false);
+
         JPanel top = new JPanel(new BorderLayout());
         top.add(form, BorderLayout.CENTER);
         top.add(GuiUtil.buttonBar(btnAdd, btnUpdate, btnDelete, btnClear), BorderLayout.SOUTH);
@@ -48,6 +54,7 @@ public class PatientPanel extends JPanel implements GuiUtil.Refreshable {
 
         add(top, BorderLayout.NORTH);
         add(center, BorderLayout.CENTER);
+        Theme.polish(this);
 
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.getSelectionModel().addListSelectionListener(e -> { if (!e.getValueIsAdjusting()) loadSelected(); });
@@ -63,7 +70,7 @@ public class PatientPanel extends JPanel implements GuiUtil.Refreshable {
     public void refresh() {
         try {
             GuiUtil.fill(model, dao.getAll(txtSearch.getText().trim()));
-        } catch (SQLException ex) {
+        } catch (SQLException | SecurityException ex) {
             GuiUtil.error(this, "Database error: " + ex.getMessage());
         }
     }
@@ -88,7 +95,7 @@ public class PatientPanel extends JPanel implements GuiUtil.Refreshable {
             refresh();
         } catch (IllegalArgumentException ex) {
             GuiUtil.error(this, GuiUtil.FORMAT_MSG);
-        } catch (SQLException ex) {
+        } catch (SQLException | SecurityException ex) {
             GuiUtil.error(this, "Database error: " + ex.getMessage());
         }
     }
@@ -105,7 +112,7 @@ public class PatientPanel extends JPanel implements GuiUtil.Refreshable {
             refresh();
         } catch (IllegalArgumentException ex) {
             GuiUtil.error(this, GuiUtil.FORMAT_MSG);
-        } catch (SQLException ex) {
+        } catch (SQLException | SecurityException ex) {
             GuiUtil.error(this, "Database error: " + ex.getMessage());
         }
     }
@@ -117,7 +124,7 @@ public class PatientPanel extends JPanel implements GuiUtil.Refreshable {
             dao.delete(Integer.parseInt(txtId.getText()));
             clear();
             refresh();
-        } catch (SQLException ex) {
+        } catch (SQLException | SecurityException ex) {
             GuiUtil.error(this, "Database error: " + ex.getMessage());
         }
     }
