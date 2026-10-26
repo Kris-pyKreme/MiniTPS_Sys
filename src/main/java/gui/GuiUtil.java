@@ -55,22 +55,31 @@ public class GuiUtil {
     /** Adds "label : field" to a GridBagLayout panel; col 0 or 1 gives a two-column form. */
     public static void addRow(JPanel p, int row, int col, String label, JComponent field) {
         GridBagConstraints g = new GridBagConstraints();
-        g.insets = new Insets(4, 6, 4, 6);
+        g.insets = new Insets(5, 0, 5, 12);
         g.anchor = GridBagConstraints.WEST;
         g.gridx = col * 2;
         g.gridy = row;
-        p.add(new JLabel(label), g);
+        JLabel caption=Theme.label(label.replaceAll(":$", ""),13,Theme.MUTED,false);
+        p.add(caption, g);
         g.gridx = col * 2 + 1;
+        g.insets = new Insets(5, 0, 5, col == 0 ? 18 : 0);
         g.fill = GridBagConstraints.HORIZONTAL;
         g.weightx = 1;
+        field.setFont(Theme.font(14,false));
+        if(field instanceof JTextField)field.setPreferredSize(new Dimension(160,38));
+        if(field instanceof JComboBox){field.setMinimumSize(new Dimension(80,38));field.setPreferredSize(new Dimension(180,38));}
+        if(field instanceof JScrollPane && ((JScrollPane)field).getViewport().getView() instanceof JTextArea){
+            field.setPreferredSize(new Dimension(180,72));field.setMinimumSize(new Dimension(90,72));
+        }
         p.add(field, g);
     }
 
     public static JPanel buttonBar(JButton... buttons) {
-        JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 6));
+        JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        p.setOpaque(false);p.setBorder(BorderFactory.createEmptyBorder(14,0,0,0));
         for (int i=0;i<buttons.length;i++) {
-            JButton b=buttons[i];
-            if(i==0){b.setBackground(Theme.TEAL);b.setForeground(Color.WHITE);b.setFont(b.getFont().deriveFont(Font.BOLD));}
+            JButton b=buttons[i];b.setFont(Theme.font(14,false));b.setBackground(Theme.WHITE);b.setForeground(Theme.INK);
+            if(i==0){b.setBackground(Theme.TEAL);b.setForeground(Color.WHITE);b.setFont(Theme.font(14,true));}
             if("Delete".equals(b.getText()))b.setForeground(new Color(0xB34747));
             p.add(b);
         }
@@ -78,13 +87,10 @@ public class GuiUtil {
     }
 
     public static JPanel searchBar(JTextField txt, JButton... buttons) {
-        JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 6));
-        p.add(new JLabel("Search:"));
-        txt.putClientProperty("JTextField.placeholderText","Search records…");
-        if(buttons.length>0)txt.addActionListener(e->buttons[0].doClick());
-        p.add(txt);
-        for (JButton b : buttons) p.add(b);
-        return p;
+        JPanel p=new JPanel(new FlowLayout(FlowLayout.RIGHT,8,0));p.setOpaque(false);
+        txt.putClientProperty("JTextField.placeholderText","Search records");txt.setPreferredSize(new Dimension(210,38));
+        txt.setColumns(16);if(buttons.length>0)txt.addActionListener(e->buttons[0].doClick());p.add(txt);
+        for(JButton button:buttons){button.setFont(Theme.font(13,false));p.add(button);}return p;
     }
 
     public static void onChange(JTextComponent f, Runnable r) {
@@ -107,9 +113,9 @@ public class GuiUtil {
 
     public static String str(Object o) { return o == null ? "" : o.toString(); }
 
-    public static void info(Component c, String m)  { JOptionPane.showMessageDialog(c, m, "Clinic TPS", JOptionPane.INFORMATION_MESSAGE); }
-    public static void error(Component c, String m) { JOptionPane.showMessageDialog(c, m, "Clinic TPS", JOptionPane.ERROR_MESSAGE); }
+    public static void info(Component c, String m)  { JOptionPane.showMessageDialog(c, m, "KlinikAccess", JOptionPane.INFORMATION_MESSAGE); }
+    public static void error(Component c, String m) { JOptionPane.showMessageDialog(c, m, "KlinikAccess", JOptionPane.ERROR_MESSAGE); }
     public static boolean confirm(Component c, String m) {
-        return JOptionPane.showConfirmDialog(c, m, "Confirm", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION;
+        return JOptionPane.showConfirmDialog(c, m, "KlinikAccess", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION;
     }
 }

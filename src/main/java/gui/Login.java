@@ -12,7 +12,7 @@ public class Login extends JFrame {
     private final JTextField txtUser=new JTextField();
     private final JPasswordField txtPass=new JPasswordField();
     private final JComboBox<Role> cmbRole=new JComboBox<>(Role.values());
-    private final JButton btnLogin=Theme.primary("Sign in to your workspace   →");
+    private final JButton btnLogin=Theme.primary("Sign in to your workspace");
     private final JLabel message=Theme.label(" ",12,new Color(0xB34747),false);
     private final JButton restoreWindow=Theme.quiet("Restore window (Esc)");
     private final AccountService accounts=new AccountService();
@@ -23,43 +23,48 @@ public class Login extends JFrame {
     private long retryAfter;
 
     public Login() {
-        super("ClinicFlow · Staff sign in");
+        super("KlinikAccess · Staff sign in");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         Rectangle available=availableScreenBounds();
-        setMinimumSize(new Dimension(Math.min(930,available.width),Math.min(620,available.height)));
-        setSize(Math.min(1040,available.width),Math.min(650,available.height));setLocationRelativeTo(null);
-        JPanel root=new JPanel(new GridLayout(1,2)); root.setBackground(Color.WHITE);
-        JPanel brand=new JPanel(new BorderLayout(0,18)); brand.setBackground(new Color(0xEDF7F4)); brand.setBorder(BorderFactory.createEmptyBorder(38,38,30,38));
-        JPanel logo=new JPanel(new FlowLayout(FlowLayout.LEFT,10,0)); logo.setOpaque(false);
-        JLabel cross=Theme.label("✚",30,Theme.TEAL,true);logo.add(cross);logo.add(Theme.label("ClinicFlow",23,Theme.INK,true));brand.add(logo,BorderLayout.NORTH);
-        JPanel story=Theme.column();
-        story.add(Box.createVerticalGlue());
-        JLabel kicker=Theme.label("A LITTLE MORE CARE. EVERY DAY.",10,Theme.TEAL,true);kicker.setAlignmentX(0);story.add(kicker);story.add(Box.createVerticalStrut(16));
-        JLabel title=Theme.label("<html>Better care starts<br>with a better flow.</html>",33,Theme.INK,true);title.setAlignmentX(0);story.add(title);story.add(Box.createVerticalStrut(14));
-        JLabel copy=Theme.label("<html>One connected space for your patients,<br>your team, and every step of their care.</html>",14,Theme.MUTED,false);copy.setAlignmentX(0);story.add(copy);
-        ClinicArt art=new ClinicArt();art.setAlignmentX(0);story.add(art);story.add(Box.createVerticalGlue());brand.add(story,BorderLayout.CENTER);
-        brand.add(Theme.label("PATIENTS   /   APPOINTMENTS   /   CARE",10,Theme.TEAL,true),BorderLayout.SOUTH);
-        root.add(brand);
-        JPanel right=new JPanel(new GridBagLayout());right.setBackground(Color.WHITE);right.setBorder(BorderFactory.createEmptyBorder(24,42,24,42));
-        JPanel form=Theme.column();form.setMaximumSize(new Dimension(350,600));
-        form.add(Theme.label("STAFF PORTAL",10,Theme.TEAL,true));form.add(Box.createVerticalStrut(13));
-        form.add(Theme.label("Welcome back",29,Theme.INK,true));form.add(Box.createVerticalStrut(8));
-        form.add(Theme.label("Sign in to continue caring for your community.",12,Theme.MUTED,false));form.add(Box.createVerticalStrut(26));
+        setMinimumSize(new Dimension(Math.min(860,available.width),Math.min(680,available.height)));
+        setSize(Math.min(1040,available.width),Math.min(780,available.height));setLocationRelativeTo(null);
+        JPanel root=new JPanel(new BorderLayout());root.setBackground(Theme.BG);root.setBorder(BorderFactory.createEmptyBorder(14,14,14,14));
+        JPanel backdrop=Theme.surface(new BorderLayout(),Theme.LOGIN_BG,24,10);
+        JPanel center=new JPanel(new GridBagLayout());center.setOpaque(false);
+        JPanel stack=Theme.column();
+        JPanel brandRow=new JPanel(new FlowLayout(FlowLayout.CENTER,0,0));brandRow.setOpaque(false);
+        brandRow.add(Theme.brand(44,26));brandRow.setMaximumSize(new Dimension(Integer.MAX_VALUE,44));
+        stack.add(brandRow);stack.add(Box.createVerticalStrut(20));
+        JPanel card=Theme.surface(new BorderLayout(),Theme.WHITE,22,28);card.setName("signInCard");
+        JPanel form=Theme.column();
+        JLabel portal=Theme.label("STAFF PORTAL",13,Theme.TEAL,true);
+        java.util.Map<java.awt.font.TextAttribute,Object> tracking=new java.util.HashMap<>();tracking.put(java.awt.font.TextAttribute.TRACKING,.08f);
+        portal.setFont(portal.getFont().deriveFont(tracking));form.add(portal);form.add(Box.createVerticalStrut(12));
+        form.add(Theme.label("Welcome back",30,Theme.INK,true));form.add(Box.createVerticalStrut(6));
+        form.add(Theme.label("Sign in to continue caring for your community.",16,Theme.MUTED,false));form.add(Box.createVerticalStrut(26));
         field(form,"Your role",cmbRole);field(form,"Username",txtUser);field(form,"Password",txtPass);
         txtUser.putClientProperty("JTextField.placeholderText","Enter your username");txtPass.putClientProperty("JTextField.placeholderText","Enter your password");
-        JCheckBox show=new JCheckBox("Show password");show.setOpaque(false);show.setForeground(Theme.MUTED);show.addActionListener(e->txtPass.setEchoChar(show.isSelected()?(char)0:'•'));form.add(show);
-        JButton forgot=new JButton("Forgot password? Contact your administrator");forgot.setBorderPainted(false);forgot.setContentAreaFilled(false);forgot.setForeground(Theme.TEAL);forgot.setFont(forgot.getFont().deriveFont(11f));forgot.setMargin(new Insets(6,0,6,0));forgot.addActionListener(e->requestReset());form.add(forgot);
-        message.setPreferredSize(new Dimension(350,36));message.setMaximumSize(new Dimension(400,36));form.add(message);
-        btnLogin.setMaximumSize(new Dimension(Integer.MAX_VALUE,46));btnLogin.setAlignmentX(0);btnLogin.addActionListener(e->doLogin());form.add(btnLogin);form.add(Box.createVerticalStrut(21));
-        form.add(Theme.label("Staff accounts are managed by your clinic administrator.",10,Theme.MUTED,false));
-        JPanel windowControls=new JPanel(new FlowLayout(FlowLayout.LEFT,0,0));windowControls.setOpaque(false);
-        windowControls.setPreferredSize(new Dimension(350,30));windowControls.setMaximumSize(new Dimension(Integer.MAX_VALUE,30));
-        restoreWindow.setName("restoreLoginWindow");restoreWindow.setVisible(false);
-        restoreWindow.setFont(restoreWindow.getFont().deriveFont(11f));restoreWindow.setMargin(new Insets(5,0,0,0));
-        restoreWindow.setBorderPainted(false);restoreWindow.setContentAreaFilled(false);restoreWindow.addActionListener(e->restoreWindow());
-        windowControls.add(restoreWindow);form.add(windowControls);
-        for(Component c:form.getComponents()) if(c instanceof JComponent)((JComponent)c).setAlignmentX(0);
-        right.add(form);root.add(right);setContentPane(root);getRootPane().setDefaultButton(btnLogin);
+        JPanel options=new JPanel(new BorderLayout());options.setOpaque(false);options.setMaximumSize(new Dimension(Integer.MAX_VALUE,26));
+        JCheckBox show=new JCheckBox("Show password");show.setOpaque(false);show.setFont(Theme.font(14,false));show.setForeground(Theme.MUTED);
+        char echo=txtPass.getEchoChar();show.addActionListener(e->txtPass.setEchoChar(show.isSelected()?(char)0:echo));options.add(show,BorderLayout.WEST);
+        JButton forgot=new JButton("Forgot password?");forgot.setName("forgotPassword");forgot.setBorderPainted(false);forgot.setContentAreaFilled(false);
+        forgot.setForeground(Theme.TEAL);forgot.setFont(Theme.font(14,false));forgot.setMargin(new Insets(0,0,0,0));forgot.addActionListener(e->requestReset());options.add(forgot,BorderLayout.EAST);form.add(options);
+        message.setPreferredSize(new Dimension(520,23));message.setMaximumSize(new Dimension(Integer.MAX_VALUE,23));form.add(message);
+        btnLogin.setText("Sign in to your workspace");btnLogin.setIcon(new LineIcon("arrow",18,Theme.WHITE));btnLogin.setHorizontalTextPosition(SwingConstants.LEFT);btnLogin.setIconTextGap(12);
+        btnLogin.setFont(Theme.font(17,true));btnLogin.setMaximumSize(new Dimension(Integer.MAX_VALUE,48));btnLogin.setPreferredSize(new Dimension(520,48));
+        btnLogin.addActionListener(e->doLogin());form.add(btnLogin);form.add(Box.createVerticalStrut(20));
+        JLabel accountNote=Theme.label("Staff accounts are managed by your clinic administrator.",13,new Color(0x8B8D88),false);
+        accountNote.setHorizontalAlignment(SwingConstants.CENTER);accountNote.setMaximumSize(new Dimension(Integer.MAX_VALUE,22));form.add(accountNote);
+        for(Component c:form.getComponents())if(c instanceof JComponent)((JComponent)c).setAlignmentX(0);
+        card.add(form,BorderLayout.CENTER);stack.add(card);stack.add(Box.createVerticalStrut(16));
+        JPanel bottom=new JPanel(new GridLayout(2,1,0,2));bottom.setOpaque(false);bottom.setMaximumSize(new Dimension(Integer.MAX_VALUE,42));
+        JLabel tagline=Theme.label("A LITTLE MORE CARE. EVERY DAY.",12,Theme.TEAL,true);tagline.setHorizontalAlignment(SwingConstants.CENTER);tagline.setFont(tagline.getFont().deriveFont(tracking));bottom.add(tagline);
+        JPanel windowControls=new JPanel(new FlowLayout(FlowLayout.CENTER,0,0));windowControls.setOpaque(false);
+        restoreWindow.setName("restoreLoginWindow");restoreWindow.setVisible(false);restoreWindow.setFont(Theme.font(11,false));restoreWindow.setForeground(Theme.TEAL);
+        restoreWindow.setMargin(new Insets(0,0,0,0));restoreWindow.setBorderPainted(false);restoreWindow.setContentAreaFilled(false);restoreWindow.addActionListener(e->restoreWindow());windowControls.add(restoreWindow);bottom.add(windowControls);stack.add(bottom);
+        JPanel constrained=new JPanel(new BorderLayout());constrained.setOpaque(false);constrained.add(stack);constrained.setPreferredSize(new Dimension(600,stack.getPreferredSize().height));
+        center.add(constrained);JScrollPane scroll=new JScrollPane(center);scroll.setBorder(BorderFactory.createEmptyBorder());scroll.setOpaque(false);scroll.getViewport().setOpaque(false);scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);scroll.getVerticalScrollBar().setUnitIncrement(16);
+        backdrop.add(scroll);root.add(backdrop);setContentPane(root);getRootPane().setDefaultButton(btnLogin);
         txtUser.setName("username");txtPass.setName("password");cmbRole.setName("role");btnLogin.setName("signIn");
         GuiUtil.onChange(txtUser,this::expandOnInput);
         getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE,0),"restoreLoginWindow");
@@ -114,9 +119,10 @@ public class Login extends JFrame {
         if(boundsAnimation!=null){boundsAnimation.stop();boundsAnimation=null;}
         super.dispose();
     }
-    private void field(JPanel p,String label,JComponent field) {
-        p.add(Theme.label(label,12,Theme.INK,true));p.add(Box.createVerticalStrut(7));
-        field.setPreferredSize(new Dimension(350,42));field.setMaximumSize(new Dimension(Integer.MAX_VALUE,42));p.add(field);p.add(Box.createVerticalStrut(16));
+    private void field(JPanel panel,String label,JComponent field) {
+        panel.add(Theme.label(label,15,Theme.INK,true));panel.add(Box.createVerticalStrut(6));
+        field.setFont(Theme.font(18,false));field.setPreferredSize(new Dimension(520,44));field.setMaximumSize(new Dimension(Integer.MAX_VALUE,44));
+        panel.add(field);panel.add(Box.createVerticalStrut(16));
     }
     private void doLogin() {
         if(System.currentTimeMillis()<retryAfter){message.setText("Please wait a moment before trying again.");return;}

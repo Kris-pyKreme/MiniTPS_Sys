@@ -16,73 +16,98 @@ public class MainFrame extends JFrame {
     private final Map<String,JComponent> screens=new LinkedHashMap<>();
     private final Map<String,JButton> navigation=new LinkedHashMap<>();
     private final Map<String,Supplier<JComponent>> factories=new LinkedHashMap<>();
-    private final JLabel heading=Theme.label("",27,Theme.INK,true),subheading=Theme.label("",12,Theme.MUTED,false);
-    private final JButton alerts=Theme.quiet("Requests  ·  0");
+    private final JLabel heading=Theme.label("Overview",30,Theme.INK,true),subheading=Theme.label("",16,Theme.MUTED,false);
+    private final JButton alerts=Theme.quiet("Requests");
     private final javax.swing.Timer updates;
     private String active="Overview";
 
-    public MainFrame() {
-        super("ClinicFlow · "+Session.current().role+" workspace");
-        setDefaultCloseOperation(EXIT_ON_CLOSE);setSize(1320,860);setMinimumSize(new Dimension(1180,760));setLocationRelativeTo(null);
-        JPanel root=new JPanel(new BorderLayout());root.setBackground(Theme.BG);
-        JPanel sidebar=new JPanel(new BorderLayout());sidebar.setBackground(Color.WHITE);sidebar.setPreferredSize(new Dimension(210,0));sidebar.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(0,0,0,1,Theme.LINE),BorderFactory.createEmptyBorder(30,16,22,16)));
-        JPanel menu=Theme.column();
-        menu.add(Theme.label("✚  ClinicFlow",22,Theme.TEAL,true));menu.add(Box.createVerticalStrut(7));menu.add(Theme.label("   YOUR CONNECTED CLINIC",9,Theme.MUTED,true));menu.add(Box.createVerticalStrut(38));menu.add(Theme.label("WORKSPACE",10,Theme.MUTED,true));menu.add(Box.createVerticalStrut(14));
-        factories.put("Overview",()->new DashboardPanel(()->navigate(user.role==Role.ADMIN?"Staff & requests":"My profile")));
+    public MainFrame(){
+        super("KlinikAccess · "+Session.current().role);
+        Rectangle area=GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
+        setDefaultCloseOperation(EXIT_ON_CLOSE);setMinimumSize(new Dimension(Math.min(1150,area.width),Math.min(720,area.height)));
+        setSize(Math.min(1320,area.width),Math.min(860,area.height));setLocationRelativeTo(null);
+        JPanel outer=new JPanel(new BorderLayout());outer.setBackground(Theme.BG);outer.setBorder(BorderFactory.createEmptyBorder(16,16,16,16));
+        JPanel shell=Theme.surface(new BorderLayout(),Theme.BG,22,0);
+        JPanel sidebar=new JPanel(new BorderLayout());sidebar.setBackground(Theme.WHITE);sidebar.setPreferredSize(new Dimension(254,0));
+        sidebar.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(0,0,0,1,Theme.LINE),BorderFactory.createEmptyBorder(26,16,22,16)));
+        JPanel menu=Theme.column();JPanel brand=Theme.brand(40,23);brand.setAlignmentX(0);brand.setMaximumSize(new Dimension(Integer.MAX_VALUE,40));menu.add(brand);menu.add(Box.createVerticalStrut(30));
+        factories.put("Overview",()->new DashboardPanel(()->navigate(user.role==Role.ADMIN?"Staff & requests":"My profile"),()->navigate("Appointments")));
         factories.put("Patients",PatientPanel::new);factories.put("Appointments",AppointmentPanel::new);
         if(user.role.consults())factories.put("Consultations",ConsultationPanel::new);
         if(user.role.bills())factories.put("Billing",BillingPanel::new);
         if(user.role==Role.ADMIN)factories.put("Staff & requests",StaffPanel::new);
         factories.put("My profile",ProfilePanel::new);
-        String[] symbols={"▦","♙","▤","✚","▣","♧","○"};int i=0;
         for(String name:factories.keySet()){
-            JButton b=new JButton(symbols[i++%symbols.length]+"    "+name);b.setName("nav-"+name);b.setHorizontalAlignment(SwingConstants.LEFT);b.setFocusPainted(false);b.setBorderPainted(false);b.setBackground(Color.WHITE);b.setForeground(Theme.MUTED);b.setMaximumSize(new Dimension(Integer.MAX_VALUE,44));b.setPreferredSize(new Dimension(175,44));b.putClientProperty("JButton.buttonType","roundRect");b.addActionListener(e->navigate(name));navigation.put(name,b);menu.add(b);menu.add(Box.createVerticalStrut(6));
+            if(name.equals("My profile"))continue;
+            String icon=name.equals("Overview")?"overview":name.equals("Staff & requests")?"staff":name.toLowerCase(Locale.ROOT);
+            JButton b=new JButton(name.equals("Staff & requests")?"Staff":name,new LineIcon(icon,20,Theme.MUTED));
+            b.setName("nav-"+name);b.setFont(Theme.font(17,false));b.setIconTextGap(16);b.setHorizontalAlignment(SwingConstants.LEFT);b.setFocusPainted(true);b.setBorderPainted(false);
+            b.setMargin(new Insets(12,16,12,12));b.setBackground(Theme.WHITE);b.setForeground(Theme.MUTED);b.setMaximumSize(new Dimension(Integer.MAX_VALUE,52));b.setPreferredSize(new Dimension(220,52));b.setAlignmentX(0);
+            b.addActionListener(e->navigate(name));navigation.put(name,b);menu.add(b);menu.add(Box.createVerticalStrut(7));
         }
         menu.add(Box.createVerticalGlue());sidebar.add(menu,BorderLayout.CENTER);
-        JPanel bottom=Theme.column();JSeparator sep=new JSeparator();sep.setMaximumSize(new Dimension(Integer.MAX_VALUE,1));bottom.add(sep);bottom.add(Box.createVerticalStrut(18));
-        bottom.add(Theme.label(user.fullName,13,Theme.INK,true));bottom.add(Box.createVerticalStrut(4));bottom.add(Theme.label(user.role+" workspace",11,Theme.MUTED,false));bottom.add(Box.createVerticalStrut(18));
-        JButton logout=Theme.quiet("↪   Sign out");logout.setMaximumSize(new Dimension(Integer.MAX_VALUE,38));logout.addActionListener(e->{if(GuiUtil.confirm(this,"Sign out of your workspace?"))signOut();});bottom.add(logout);bottom.add(Box.createVerticalStrut(14));bottom.add(Theme.label("●  Connected to your clinic",10,Theme.TEAL,false));sidebar.add(bottom,BorderLayout.SOUTH);root.add(sidebar,BorderLayout.WEST);
-        JPanel main=new JPanel(new BorderLayout(0,22));main.setOpaque(false);main.setBorder(BorderFactory.createEmptyBorder(28,28,18,28));
-        JPanel header=new JPanel(new BorderLayout(12,18));header.setOpaque(false);JPanel titles=Theme.column();titles.add(Theme.label("WORKSPACE  /  "+user.role.toString().toUpperCase(),10,Theme.MUTED,true));titles.add(Box.createVerticalStrut(10));titles.add(heading);titles.add(Box.createVerticalStrut(8));titles.add(subheading);header.add(titles,BorderLayout.CENTER);
-        JPanel actions=new JPanel(new FlowLayout(FlowLayout.RIGHT,8,0));actions.setOpaque(false);
-        actions.add(Theme.label(LocalDate.now().format(DateTimeFormatter.ofPattern("EEE, MMM d, yyyy")),11,Theme.MUTED,false));
-        if(user.role==Role.ADMIN){alerts.addActionListener(e->navigate("Staff & requests"));actions.add(alerts);}
-        JButton refresh=Theme.quiet("↻  Refresh");refresh.addActionListener(e->refreshActive());actions.add(refresh);header.add(actions,BorderLayout.EAST);main.add(header,BorderLayout.NORTH);
-        pages.setOpaque(false);main.add(pages,BorderLayout.CENTER);
-        JPanel footer=new JPanel(new BorderLayout());footer.setOpaque(false);footer.add(Theme.label("CLINICFLOW  /  Patient care, thoughtfully connected.",9,Theme.MUTED,false),BorderLayout.WEST);footer.add(Theme.label(""+LocalDate.now().getYear()+"  ·  Clinic workspace",9,Theme.MUTED,false),BorderLayout.EAST);main.add(footer,BorderLayout.SOUTH);root.add(main,BorderLayout.CENTER);setContentPane(root);
-        updates=new javax.swing.Timer(15000,e->poll());updates.start();addWindowListener(new WindowAdapter(){@Override public void windowClosed(WindowEvent e){updates.stop();}});
-        navigate("Overview");
+        JPanel bottom=Theme.column();JSeparator line=new JSeparator();line.setForeground(Theme.LINE);line.setMaximumSize(new Dimension(Integer.MAX_VALUE,1));bottom.add(line);bottom.add(Box.createVerticalStrut(18));
+        JPanel identity=new JPanel(new BorderLayout(12,0));identity.setOpaque(false);identity.setMaximumSize(new Dimension(Integer.MAX_VALUE,54));
+        JLabel avatar=new JLabel(initials(user.fullName),SwingConstants.CENTER);avatar.setFont(Theme.font(15,true));avatar.setForeground(Theme.TEAL);
+        JPanel circle=Theme.surface(new BorderLayout(),Theme.PALE,48,0);circle.setBorder(BorderFactory.createEmptyBorder());circle.setPreferredSize(new Dimension(44,44));circle.add(avatar);identity.add(circle,BorderLayout.WEST);
+        JButton profile=new JButton("<html><b>"+html(user.fullName)+"</b><br><font color='#60625F'>"+user.role+"</font></html>");
+        profile.setName("nav-My profile");profile.setFont(Theme.font(15,false));profile.setHorizontalAlignment(SwingConstants.LEFT);profile.setBorderPainted(false);profile.setContentAreaFilled(false);profile.setMargin(new Insets(0,0,0,0));profile.setToolTipText("My profile");profile.addActionListener(e->navigate("My profile"));identity.add(profile);bottom.add(identity);bottom.add(Box.createVerticalStrut(20));
+        JButton logout=Theme.quiet("Sign out");logout.setIcon(new LineIcon("logout",20,Theme.MUTED));logout.setIconTextGap(16);logout.setFont(Theme.font(17,false));logout.setForeground(Theme.MUTED);logout.setHorizontalAlignment(SwingConstants.LEFT);logout.setBorderPainted(false);logout.setMaximumSize(new Dimension(Integer.MAX_VALUE,44));logout.addActionListener(e->{if(GuiUtil.confirm(this,"Sign out of KlinikAccess?"))signOut();});bottom.add(logout);sidebar.add(bottom,BorderLayout.SOUTH);shell.add(sidebar,BorderLayout.WEST);
+        JPanel main=new JPanel(new BorderLayout(0,22));main.setOpaque(false);main.setBorder(BorderFactory.createEmptyBorder(28,28,26,28));
+        JPanel header=new JPanel(new BorderLayout(12,0));header.setOpaque(false);JPanel titles=Theme.column();titles.add(heading);titles.add(Box.createVerticalStrut(7));titles.add(subheading);header.add(titles,BorderLayout.CENTER);
+        JPanel actions=new JPanel(new FlowLayout(FlowLayout.RIGHT,10,4));actions.setOpaque(false);
+        if(user.role==Role.ADMIN){alerts.setFont(Theme.font(16,false));alerts.setIcon(new LineIcon("bell",18,Theme.INK));alerts.setIconTextGap(9);alerts.addActionListener(e->navigate("Staff & requests"));actions.add(alerts);}
+        JButton refresh=Theme.iconButton("refresh","Refresh current page");refresh.setName("refreshPage");refresh.addActionListener(e->refreshActive());actions.add(refresh);header.add(actions,BorderLayout.EAST);main.add(header,BorderLayout.NORTH);
+        pages.setOpaque(false);main.add(pages,BorderLayout.CENTER);shell.add(main);outer.add(shell);setContentPane(outer);
+        updates=new javax.swing.Timer(15000,e->poll());updates.start();addWindowListener(new WindowAdapter(){@Override public void windowClosed(WindowEvent e){updates.stop();}});navigate("Overview");
     }
-    public void navigate(String name) {
+    private static String initials(String name){String[] words=name.trim().split("\\s+");return (words[0].substring(0,1)+(words.length>1?words[words.length-1].substring(0,1):"")).toUpperCase(Locale.ROOT);}
+    private static String html(String text){return text.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;");}
+    public void navigate(String name){
         if(!factories.containsKey(name))throw new SecurityException("This page is not available for your role.");
-        try{Session.verified();}catch(SecurityException e){expired(e.getMessage());return;}catch(Exception e){GuiUtil.error(this,e.getMessage());return;}
-        if(!screens.containsKey(name)){JComponent screen=factories.get(name).get();screens.put(name,screen);pages.add(screen,name);}
+        try{Session.verified();}catch(SecurityException ex){expired(ex.getMessage());return;}catch(Exception ex){GuiUtil.error(this,ex.getMessage());return;}
+        if(!screens.containsKey(name)){
+            JComponent screen=factories.get(name).get();screens.put(name,screen);
+            if(!name.equals("Overview")&&!name.equals("My profile")){
+                JScrollPane scroll=new JScrollPane(new PageViewport(screen));scroll.setBorder(BorderFactory.createEmptyBorder());
+                scroll.setOpaque(false);scroll.getViewport().setOpaque(false);scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);scroll.getVerticalScrollBar().setUnitIncrement(18);pages.add(scroll,name);
+            }else pages.add(screen,name);
+        }
         active=name;((CardLayout)pages.getLayout()).show(pages,name);
         for(Map.Entry<String,JButton> entry:navigation.entrySet()){
-            boolean selected=entry.getKey().equals(name);entry.getValue().setBackground(selected?Theme.PALE:Color.WHITE);entry.getValue().setForeground(selected?Theme.TEAL:Theme.MUTED);entry.getValue().setFont(entry.getValue().getFont().deriveFont(selected?Font.BOLD:Font.PLAIN));
+            boolean selected=entry.getKey().equals(name);JButton button=entry.getValue();Color color=selected?Theme.TEAL:Theme.MUTED;
+            button.setBackground(selected?Theme.PALE:Theme.WHITE);button.setForeground(color);button.setFont(Theme.font(17,selected));
+            button.setIcon(new LineIcon(entry.getKey().equals("Overview")?"overview":entry.getKey().equals("Staff & requests")?"staff":entry.getKey().toLowerCase(Locale.ROOT),20,color));
         }
-        heading.setText(name.equals("Overview")?user.role+" dashboard":name);
-        subheading.setText(description(name));refreshActive();
+        heading.setText(name.equals("Staff & requests")?"Staff":name.equals("My profile")?"My profile":name);subheading.setText(description(name));refreshActive();
     }
-    private String description(String name) {
+    private String description(String name){
         switch(name){
-            case "Overview":return "Welcome back, "+user.fullName+". Here’s your clinic at a glance.";
-            case "Patients":return user.role==Role.DOCTOR?"Patient records for your assigned appointments.":"A clear picture of every patient, from their very first visit.";
-            case "Appointments":return user.role==Role.DOCTOR?"Your assigned appointments and upcoming visits.":user.role==Role.NURSE?"View the clinic schedule and prepare for arriving patients.":"Plan visits, coordinate your care team, and keep the day moving.";
-            case "Consultations":return "Record diagnoses, treatment notes, and prescriptions for each visit.";
-            case "Billing":return "Turn completed consultations into clear, accurate patient bills.";
-            case "Staff & requests":return "Manage staff access and resolve password requests in one place.";
-            default:return "Your staff identity and password change requests.";
+            case "Overview":return LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, MMMM d",Locale.ENGLISH));
+            case "Patients":return user.role==Role.DOCTOR?"Patients assigned to your appointments.":"Patient registration and contact details.";
+            case "Appointments":return user.role==Role.DOCTOR?"Your appointments and upcoming visits.":"Schedule and manage patient visits.";
+            case "Consultations":return "Consultation notes, prescriptions, and fees.";
+            case "Billing":return "Patient bills and payment records.";
+            case "Staff & requests":return "Staff accounts and password requests.";
+            default:return "Account details and password requests.";
         }
     }
     private void refreshActive(){JComponent screen=screens.get(active);if(screen instanceof GuiUtil.Refreshable)((GuiUtil.Refreshable)screen).refresh();}
     private void poll(){
-        try{
-            Session.verified();
-            if(user.role==Role.ADMIN)alerts.setText("Requests  ·  "+new AccountService().requests().size());
+        try{Session.verified();if(user.role==Role.ADMIN){int count=new AccountService().requests().size();alerts.setText(count==0?"Requests":"Requests ("+count+")");}
             if(active.equals("Overview")||active.equals("Staff & requests")||active.equals("My profile"))refreshActive();
-        }catch(SecurityException ex){expired(ex.getMessage());}catch(Exception ex){subheading.setText("Connection interrupted. Use Refresh to try again.");}
+        }catch(SecurityException ex){expired(ex.getMessage());}catch(Exception ex){subheading.setText("Connection interrupted. Refresh to try again.");}
     }
     private void expired(String message){updates.stop();GuiUtil.info(this,message);signOut();}
     private void signOut(){updates.stop();Session.logout();dispose();new Login().setVisible(true);}
+    /** Short laptop displays can scroll the page without crushing the records table. */
+    private static class PageViewport extends JPanel implements Scrollable {
+        PageViewport(JComponent content){super(new BorderLayout());setOpaque(false);add(content);}
+        @Override public Dimension getPreferredSize(){return new Dimension(super.getPreferredSize().width,620);}
+        @Override public Dimension getPreferredScrollableViewportSize(){return getPreferredSize();}
+        @Override public int getScrollableUnitIncrement(Rectangle r,int orientation,int direction){return 18;}
+        @Override public int getScrollableBlockIncrement(Rectangle r,int orientation,int direction){return Math.max(18,r.height-36);}
+        @Override public boolean getScrollableTracksViewportWidth(){return true;}
+        @Override public boolean getScrollableTracksViewportHeight(){return getParent() instanceof JViewport&&getParent().getHeight()>=620;}
+    }
 }

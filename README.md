@@ -1,6 +1,12 @@
-# ClinicFlow — Java Swing clinic system
+# KlinikAccess — Java Swing clinic system
 
 A light desktop workspace for patient registration, appointments, consultations, and billing. Built with Java Swing, FlatLaf, Maven, and MySQL Connector/J. Opens directly as a Maven project in NetBeans. No web server is needed.
+
+## Interface previews
+
+The desktop interface uses bundled Lato typography, neutral cards, and teal navigation accents. These are screenshots of the running Swing application.
+
+[Sign in](docs/screenshots/sign-in.png) · [Overview](docs/screenshots/overview.png) · [Patients](docs/screenshots/patients.png) · [Appointments](docs/screenshots/appointments.png) · [Consultations](docs/screenshots/consultations.png) · [Billing](docs/screenshots/billing.png) · [Staff](docs/screenshots/staff.png) · [Profile](docs/screenshots/profile.png)
 
 ## Run in NetBeans with XAMPP
 
@@ -9,11 +15,11 @@ A light desktop workspace for patient registration, appointments, consultations,
 3. In NetBeans choose **File → Open Project** and select this repository's root, the directory containing `pom.xml`.
 4. The defaults are `localhost:3306`, user `root`, and an empty password. For other settings copy `db.properties.example` to **`db.properties` at the project root** and edit it. This local file is ignored by Git. No Java source edit is required.
 5. Choose **Clean and Build**, then **Run Project** with main class `Main`. Maven downloads the dependencies on the first build. The command-line equivalent is `mvn package` then `mvn exec:java` from the repository root. A desktop display is required.
-6. Select **Admin**, username **`admin`**, password **`admin123`**. Open **Staff & requests** to create Doctor, Nurse, and Receptionist accounts, or reset passwords. A second seeded Receptionist account is **`staff1` / `staff123`**. Replace the development passwords through the admin dashboard before real use.
+6. Select **Admin**, username **`admin`**, password **`admin123`**. Open **Staff** to create Doctor, Nurse, and Receptionist accounts, or reset passwords. A second seeded Receptionist account is **`staff1` / `staff123`**. Replace the development passwords through the admin dashboard before real use.
 
 The first launch performs an additive upgrade of `staff_users` and creates `password_requests`. The database user needs CREATE and ALTER privileges for this first launch. Existing patient records, staff passwords, and clinic transactions are retained. Legacy SHA-256 passwords are upgraded to salted PBKDF2 after a successful login. Do not reimport `schema.sql` into an existing database to upgrade: its doctor seed statements append rows. `staff_users.sql` preserves existing accounts on reimport.
 
-The login includes a gently animated clinic illustration. The first username input smoothly expands the login to fill the current monitor's available screen area, keeping the taskbar accessible and preserving the fields and keyboard focus. Press **Esc** or click **Restore window (Esc)** to return to the original size. Automatic expansion happens once per login window, so continuing to type after restoring will not expand it again.
+The sign-in screen uses a centered white card on a pale teal background, with bundled Lato regular/bold typography and drawn icons. The first username input smoothly expands the login to fill the current monitor's available screen area, keeping the taskbar accessible and preserving the fields and keyboard focus. Press **Esc** or click **Restore window (Esc)** to return to the original size. Automatic expansion happens once per login window, so continuing to type after restoring will not expand it again.
 
 Alternative connection settings, in priority order: Java properties `clinic.db.url`, `clinic.db.user`, `clinic.db.password`; environment variables `CLINIC_DB_URL`, `CLINIC_DB_USER`, `CLINIC_DB_PASSWORD`; then `db.properties`. Use `-Dclinic.config=/path/to/db.properties` to select another configuration file. Passwords belong in local configuration, never in source control. The app uses Philippine time (`Asia/Manila`) for its calendar and timestamps.
 
@@ -35,9 +41,9 @@ The calendar supports **Appointment date** (scheduled visit day) and **Date book
 
 ## Password request and reset
 
-- On the login screen, enter the username, select the correct role, and click **Forgot password? Contact your administrator**. The response does not disclose whether the account exists.
+- On the login screen, enter the username, select the correct role, and click **Forgot password?**. The response does not disclose whether the account exists.
 - A signed-in staff member can open **My profile → Change password · Send request**. This sends a request; it does not let the staff member change their password directly.
-- The administrator sees the pending count and request queue in **Staff & requests**. Select a request, choose **Set password**, and enter and confirm the new password. Admins may also reset an account directly from the staff directory.
+- The administrator sees the pending count and request queue in **Staff**. Select a request, choose **Set password**, and enter and confirm the new password. Admins may also reset an account directly from the staff directory.
 - The password and request status are committed in one transaction. Requests are deduplicated per account. The admin shares the new password directly with the staff member; there is no email/SMS integration.
 - Existing sessions are rejected on their next authorized operation and signed out by the next 15-second session check. The previous password no longer works. Changes to staff access also invalidate prior sessions.
 - Admins cannot remove their own administrator role. Keep another administrator account available for recovery if the primary administrator forgets their password.
@@ -60,3 +66,5 @@ Provide the test database credentials using the same configuration mechanisms ab
 `mvn -Dclinic.ui.tests=true -Dtest=LoginAnimationTest test` runs just the desktop animation checks without a database. These use real key events to check expansion, preserved input/focus, Escape restoration, and cancellation when the login closes.
 
 The cloud development setup stores tools in `/workspace/.clinic-tools`; source its `env.sh` and run `start-services.sh` before building. Use its Maven settings and local repository when running in this cloud environment. Xvfb validates the desktop interface but does not provide an interactive web preview.
+
+The Lato fonts are bundled under `src/main/resources/fonts` with their SIL Open Font License, so typography stays consistent in NetBeans and on other computers. The application name is KlinikAccess; the existing `clinic_tps` database name is retained so existing records continue to work.

@@ -1,4 +1,4 @@
--- Clinic Appointment and Billing TPS  |  run this once in MySQL Workbench / phpMyAdmin
+-- KlinikAccess  |  run this once in MySQL Workbench / phpMyAdmin
 CREATE DATABASE IF NOT EXISTS clinic_tps;
 USE clinic_tps;
 

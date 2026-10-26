@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS staff_users (
 );
 
 -- Existing passwords are preserved when this file is imported again.
--- Default development accounts (reset these in Admin > Staff & requests before use):
+-- Default development accounts (reset these in Admin > Staff before use):
 --   admin  / admin123
 --   staff1 / staff123
 INSERT INTO staff_users (username, salt, password_hash, full_name, role) VALUES
@@ -19,7 +19,7 @@ INSERT INTO staff_users (username, salt, password_hash, full_name, role) VALUES
  ('staff1', 'd4e5f6', SHA2(CONCAT('d4e5f6','staff123'),256), 'Front Desk Staff',     'Receptionist')
 ON DUPLICATE KEY UPDATE username=staff_users.username;
 
--- Add staff through Admin > Staff & requests so passwords use PBKDF2.
+-- Add staff through Admin > Staff so passwords use PBKDF2.
 
 -- Main automatically adds doctor_id, password_scheme, credential_version, and
 -- password_requests on first launch. Create Doctor/Nurse accounts in the Admin workspace.

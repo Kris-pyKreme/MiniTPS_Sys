@@ -21,45 +21,65 @@ public class BillingPanel extends JPanel implements GuiUtil.Refreshable {
     private final DefaultTableModel model = GuiUtil.tableModel(
             "Bill ID", "Consult ID", "Patient", "Fee", "Other Charges", "Total", "Status", "Method", "Billed On");
     private final JTable table = new JTable(model);
+    private final JPanel recordsBody = new JPanel(new CardLayout());
+    private final JLabel recordsCount = Theme.label("0 records", 13, Theme.MUTED, false);
+    private final JLabel emptyTitle = Theme.label("No bills yet", 18, Theme.INK, true);
+    private final JLabel emptyHint = Theme.label("Bills will appear here after a consultation is billed.", 13, Theme.MUTED, false);
 
     public BillingPanel() {
-        setLayout(new BorderLayout(8, 8));
-        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        setLayout(new BorderLayout(0, 18));
+        setOpaque(false);
         txtId.setEditable(false);
+        txtId.putClientProperty("JTextField.placeholderText", "Assigned automatically");
         txtFee.setEditable(false);
         txtTotal.setEditable(false);
+        txtFee.putClientProperty("JTextField.placeholderText", "Filled from consultation");
+        txtTotal.putClientProperty("JTextField.placeholderText", "Calculated automatically");
         txtOther.setText("0");
 
         JPanel form = new JPanel(new GridBagLayout());
-        form.setBorder(BorderFactory.createTitledBorder("Billing Details"));
-        GuiUtil.addRow(form, 0, 0, "Bill ID:", txtId);
-        GuiUtil.addRow(form, 0, 1, "Consultation (unbilled):", cmbConsultation);
-        GuiUtil.addRow(form, 1, 0, "Consultation Fee (PHP):", txtFee);
-        GuiUtil.addRow(form, 1, 1, "Other Charges (PHP):", txtOther);
-        GuiUtil.addRow(form, 2, 0, "Total (PHP):", txtTotal);
-        GuiUtil.addRow(form, 2, 1, "Payment Status:", cmbStatus);
-        GuiUtil.addRow(form, 3, 1, "Payment Method:", cmbMethod);
+        form.setOpaque(false);
+        GuiUtil.addRow(form, 0, 0, "Bill ID", txtId);
+        GuiUtil.addRow(form, 0, 1, "Unbilled consultation", cmbConsultation);
+        GuiUtil.addRow(form, 1, 0, "Consultation fee (PHP)", txtFee);
+        GuiUtil.addRow(form, 1, 1, "Other charges (PHP)", txtOther);
+        GuiUtil.addRow(form, 2, 0, "Total (PHP)", txtTotal);
+        GuiUtil.addRow(form, 2, 1, "Payment status", cmbStatus);
+        GuiUtil.addRow(form, 3, 1, "Payment method", cmbMethod);
 
-        JButton btnAdd = new JButton("Create Bill"), btnUpdate = new JButton("Update"),
-                btnDelete = new JButton("Delete"), btnClear = new JButton("Clear"),
-                btnSearch = new JButton("Search"), btnAll = new JButton("Show All");
+        JButton btnAdd = Theme.primary("Create bill"), btnUpdate = Theme.quiet("Save changes"),
+                btnDelete = Theme.quiet("Delete"), btnClear = Theme.quiet("Clear"),
+                btnSearch = Theme.quiet("Search"), btnAll = Theme.quiet("Reset");
+        btnDelete.setForeground(new Color(0xAD3D3D));
 
         boolean editable = Session.current().role.bills();
         btnAdd.setVisible(editable); btnUpdate.setVisible(editable); btnClear.setVisible(editable);
         btnDelete.setVisible(Session.current().role == Role.ADMIN);
-        if (!editable) form.setVisible(false);
+        JPanel formCard = Theme.card(new BorderLayout(0, 12));
+        formCard.add(Theme.label("Bill details", 18, Theme.INK, true), BorderLayout.NORTH);
+        formCard.add(form, BorderLayout.CENTER);
+        formCard.add(GuiUtil.buttonBar(btnAdd, btnUpdate, btnClear, btnDelete), BorderLayout.SOUTH);
+        formCard.setVisible(editable);
 
-        JPanel top = new JPanel(new BorderLayout());
-        top.add(form, BorderLayout.CENTER);
-        top.add(GuiUtil.buttonBar(btnAdd, btnUpdate, btnDelete, btnClear), BorderLayout.SOUTH);
-
-        JPanel center = new JPanel(new BorderLayout());
-        center.add(GuiUtil.searchBar(txtSearch, btnSearch, btnAll), BorderLayout.NORTH);
-        center.add(new JScrollPane(table), BorderLayout.CENTER);
-
-        add(top, BorderLayout.NORTH);
-        add(center, BorderLayout.CENTER);
-        Theme.polish(this);
+        JPanel recordsCard = Theme.card(new BorderLayout(0, 14));
+        JPanel recordsHeader = new JPanel(new BorderLayout(0, 12));recordsHeader.setOpaque(false);
+        JPanel recordTitle = new JPanel(new BorderLayout());recordTitle.setOpaque(false);
+        recordTitle.add(Theme.label("Billing records", 18, Theme.INK, true), BorderLayout.WEST);
+        recordTitle.add(recordsCount, BorderLayout.EAST);
+        recordsHeader.add(recordTitle, BorderLayout.NORTH);
+        recordsHeader.add(GuiUtil.searchBar(txtSearch, btnSearch, btnAll), BorderLayout.SOUTH);
+        recordsCard.add(recordsHeader, BorderLayout.NORTH);
+        JScrollPane scroll = new JScrollPane(table);
+        scroll.setBorder(BorderFactory.createEmptyBorder());scroll.getViewport().setBackground(Theme.WHITE);
+        table.setName("billRecords");
+        recordsBody.setOpaque(false);recordsBody.add(scroll, "table");
+        JPanel empty = new JPanel(new GridBagLayout());empty.setBackground(Theme.WHITE);
+        JPanel emptyText = Theme.column();emptyTitle.setAlignmentX(CENTER_ALIGNMENT);emptyHint.setAlignmentX(CENTER_ALIGNMENT);
+        emptyText.add(emptyTitle);emptyText.add(Box.createVerticalStrut(8));emptyText.add(emptyHint);empty.add(emptyText);
+        recordsBody.add(empty, "empty");recordsCard.add(recordsBody, BorderLayout.CENTER);
+        model.addTableModelListener(e -> updateRecordsState());
+        add(formCard, BorderLayout.NORTH);add(recordsCard, BorderLayout.CENTER);
+        updateRecordsState();Theme.polish(this);
 
         // Auto-fill fee when a consultation is picked; keep total live as charges change
         cmbConsultation.addActionListener(e -> {
@@ -77,6 +97,15 @@ public class BillingPanel extends JPanel implements GuiUtil.Refreshable {
         btnClear.addActionListener(e -> clear());
         btnSearch.addActionListener(e -> loadTable());
         btnAll.addActionListener(e -> { txtSearch.setText(""); loadTable(); });
+    }
+
+    private void updateRecordsState() {
+        int count = model.getRowCount();
+        recordsCount.setText(count + (count == 1 ? " record" : " records"));
+        boolean searching = !txtSearch.getText().trim().isEmpty();
+        emptyTitle.setText(searching ? "No matching bills" : "No bills yet");
+        emptyHint.setText(searching ? "Try a different search or reset the filter." : "Bills will appear here after a consultation is billed.");
+        ((CardLayout) recordsBody.getLayout()).show(recordsBody, count == 0 ? "empty" : "table");
     }
 
     @Override

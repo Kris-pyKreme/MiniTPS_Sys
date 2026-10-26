@@ -10,7 +10,7 @@ public class Main {
             DatabaseSetup.upgrade();
         } catch(Exception ex) {
             JOptionPane.showMessageDialog(null,"Cannot prepare the clinic database.\nStart MySQL in XAMPP and import database/schema.sql and database/staff_users.sql.\n"
-                    + "Check db.properties if your connection differs from localhost / root.\n\n"+ex.getMessage(),"ClinicFlow",JOptionPane.ERROR_MESSAGE);
+                    + "Check db.properties if your connection differs from localhost / root.\n\n"+ex.getMessage(),"KlinikAccess",JOptionPane.ERROR_MESSAGE);
             return;
         }
         SwingUtilities.invokeLater(()->new Login().setVisible(true));
