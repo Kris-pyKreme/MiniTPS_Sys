@@ -1,6 +1,7 @@
 package gui;
 
 import dao.PatientDAO;
+import validation.PatientInputs;
 import java.awt.*;
 import security.*;
 import java.sql.SQLException;
@@ -28,8 +29,10 @@ public class PatientPanel extends JPanel implements GuiUtil.Refreshable {
         setOpaque(false);
         txtId.setEditable(false);
         txtId.putClientProperty("JTextField.placeholderText", "Assigned automatically");
-        txtBirth.putClientProperty("JTextField.placeholderText", "yyyy-MM-dd");
-        txtContact.putClientProperty("JTextField.placeholderText", "Contact number");
+        txtBirth.putClientProperty("JTextField.placeholderText", "YYYY-MM-DD");
+        txtBirth.setToolTipText("Birth date: YYYY-MM-DD, for example 2000-05-12");
+        txtContact.putClientProperty("JTextField.placeholderText", "9123456789");
+        txtContact.setToolTipText("10 digits starting with 9, for example 9123456789");
         txtEmail.putClientProperty("JTextField.placeholderText", "name@example.com");
 
         JPanel form = new JPanel(new GridBagLayout());
@@ -60,7 +63,7 @@ public class PatientPanel extends JPanel implements GuiUtil.Refreshable {
         JPanel recordsCard = Theme.card(new BorderLayout(0, 14));
         JPanel recordsHeader = new JPanel(new BorderLayout(0, 12));recordsHeader.setOpaque(false);
         JPanel recordTitle = new JPanel(new BorderLayout());recordTitle.setOpaque(false);
-        recordTitle.add(Theme.label("Patient records", 18, Theme.INK, true), BorderLayout.WEST);
+        recordTitle.add(Theme.label("Patient records", 20, Theme.INK, true), BorderLayout.WEST);
         recordTitle.add(recordsCount, BorderLayout.EAST);
         recordsHeader.add(recordTitle, BorderLayout.NORTH);
         recordsHeader.add(GuiUtil.searchBar(txtSearch, btnSearch, btnAll), BorderLayout.SOUTH);
@@ -112,6 +115,8 @@ public class PatientPanel extends JPanel implements GuiUtil.Refreshable {
             GuiUtil.error(this, "First name, last name and birth date are required.");
             return false;
         }
+        try { PatientInputs.contact(txtContact.getText()); }
+        catch (IllegalArgumentException ex) { GuiUtil.error(this, ex.getMessage()); return false; }
         return true;
     }
 

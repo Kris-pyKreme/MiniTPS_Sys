@@ -12,8 +12,8 @@ import javax.swing.text.JTextComponent;
 public class GuiUtil {
 
     public static final String FORMAT_MSG =
-            "Please check your input:\n- Date format: yyyy-MM-dd (e.g. 2026-10-20)\n"
-          + "- Time format: HH:mm (e.g. 14:30)\n- Amounts must be numbers (e.g. 500.00)";
+            "Please check your input:\n- Date format: YYYY-MM-DD (e.g. 2026-10-20)\n"
+          + "- Time format: HH-MM (e.g. 14-30, using 24-hour time)\n- Amounts must be numbers (e.g. 500.00)";
 
     /** Combo box entry: an id plus a display label (and an optional extra value). */
     public static class Item {
@@ -55,14 +55,15 @@ public class GuiUtil {
     /** Adds "label : field" to a GridBagLayout panel; col 0 or 1 gives a two-column form. */
     public static void addRow(JPanel p, int row, int col, String label, JComponent field) {
         GridBagConstraints g = new GridBagConstraints();
-        g.insets = new Insets(5, 0, 5, 12);
+        g.insets = new Insets(8, 0, 8, 16);
         g.anchor = GridBagConstraints.WEST;
         g.gridx = col * 2;
         g.gridy = row;
         JLabel caption=Theme.label(label.replaceAll(":$", ""),13,Theme.MUTED,false);
+        caption.setLabelFor(field);caption.setMinimumSize(caption.getPreferredSize());
         p.add(caption, g);
         g.gridx = col * 2 + 1;
-        g.insets = new Insets(5, 0, 5, col == 0 ? 18 : 0);
+        g.insets = new Insets(8, 0, 8, col == 0 ? 32 : 0);
         g.fill = GridBagConstraints.HORIZONTAL;
         g.weightx = 1;
         field.setFont(Theme.font(14,false));
@@ -90,11 +91,11 @@ public class GuiUtil {
     }
 
     public static JPanel searchBar(JTextField txt, JButton... buttons) {
-        JPanel p=new JPanel(new FlowLayout(FlowLayout.RIGHT,8,0));p.setOpaque(false);
+        JPanel p=new JPanel(new FlowLayout(FlowLayout.LEFT,10,0));p.setOpaque(false);
         txt.putClientProperty("JTextField.placeholderText","Search records");
         int height=Theme.controlHeight(txt,38);txt.setPreferredSize(new Dimension(210,height));txt.setMinimumSize(new Dimension(80,height));
         txt.setColumns(16);if(buttons.length>0)txt.addActionListener(e->buttons[0].doClick());p.add(txt);
-        for(JButton button:buttons){button.setFont(Theme.font(13,false));p.add(button);}return p;
+        for(JButton button:buttons){button.setFont(Theme.font(14,false));p.add(button);}return p;
     }
 
     public static void onChange(JTextComponent f, Runnable r) {
@@ -110,7 +111,9 @@ public class GuiUtil {
 
     public static java.sql.Time time(String s) {
         try {
-            java.time.LocalTime t = java.time.LocalTime.parse(s.trim(), java.time.format.DateTimeFormatter.ofPattern("HH:mm").withResolverStyle(java.time.format.ResolverStyle.STRICT));
+            // HH-MM is the visible guide; Java's minute token is lowercase mm.
+            // Retain colon input for records and workflows created before the guide changed.
+            java.time.LocalTime t = java.time.LocalTime.parse(s.trim().replace('-', ':'), java.time.format.DateTimeFormatter.ofPattern("HH:mm").withResolverStyle(java.time.format.ResolverStyle.STRICT));
             return java.sql.Time.valueOf(t);
         } catch(java.time.DateTimeException e) { throw new IllegalArgumentException("Invalid time",e); }
     }

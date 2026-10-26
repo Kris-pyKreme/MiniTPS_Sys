@@ -46,6 +46,17 @@ class ClinicIntegrationTest {
         new AppointmentDAO().insert(patient,doctor,java.sql.Date.valueOf("2099-06-01"),Time.valueOf(time),"Scheduled","IT_visit");
         return number("SELECT appointment_id FROM appointments WHERE patient_id="+patient+" AND doctor_id="+doctor);
     }
+    @Test void patientContactFormatIsEnforcedForInsertAndUpdate()throws Exception {
+        Session.login(nurse);PatientDAO dao=new PatientDAO();
+        dao.insert("IT_contact","Test",java.sql.Date.valueOf("2000-01-01"),"Female","9123456789","","");
+        int id=((Number)dao.getAll("IT_contact").get(0)[0]).intValue();
+        assertEquals("9123456789",dao.getAll("IT_contact").get(0)[5]);
+        assertThrows(IllegalArgumentException.class,()->dao.insert("IT_badcontact","Test",java.sql.Date.valueOf("2000-01-01"),"Female","09123456789","",""));
+        assertThrows(IllegalArgumentException.class,()->dao.update(id,"IT_contact","Test",java.sql.Date.valueOf("2000-01-01"),"Female","8123456789","",""));
+        assertEquals("9123456789",dao.getAll("IT_contact").get(0)[5]);
+        dao.update(id,"IT_contact","Test",java.sql.Date.valueOf("2000-01-01"),"Female","9987654321","","");
+        assertEquals("9987654321",dao.getAll("IT_contact").get(0)[5]);
+    }
     @Test void roleSelectorMustMatchDatabaseRole()throws Exception{
         assertNull(accounts.authenticate("it_NURSE","testpass123".toCharArray(),Role.ADMIN));
         assertNull(accounts.authenticate("it_NURSE","wrong".toCharArray(),Role.NURSE));

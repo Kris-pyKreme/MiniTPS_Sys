@@ -25,5 +25,14 @@ class AccessAndValidationTest {
         assertEquals("14:30:00",GuiUtil.time("14:30").toString());
         assertThrows(IllegalArgumentException.class,()->GuiUtil.time("24:01"));
     }
+    @Test void visibleDateAndTimeGuidesUseCalendarYearsAndMinutes() {
+        assertEquals("2021-01-01",GuiUtil.date("2021-01-01").toString());
+        assertEquals("14:30:00",GuiUtil.time("14-30").toString());
+        assertEquals("14:13:00",GuiUtil.time("14-13").toString());
+        assertEquals("00:00:00",GuiUtil.time("00-00").toString());
+        assertEquals("23:59:00",GuiUtil.time("23-59").toString());
+        assertThrows(IllegalArgumentException.class,()->GuiUtil.time("24-00"));
+        assertThrows(IllegalArgumentException.class,()->GuiUtil.time("14-60"));
+    }
     @Test void loggedOutSessionDenied() {Session.logout();assertThrows(SecurityException.class,Session::current);}
 }

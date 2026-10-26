@@ -34,8 +34,10 @@ public class AppointmentPanel extends JPanel implements GuiUtil.Refreshable {
         setOpaque(false);
         txtId.setEditable(false);
         txtId.putClientProperty("JTextField.placeholderText", "Assigned automatically");
-        txtDate.putClientProperty("JTextField.placeholderText", "yyyy-MM-dd");
-        txtTime.putClientProperty("JTextField.placeholderText", "HH:mm");
+        txtDate.putClientProperty("JTextField.placeholderText", "YYYY-MM-DD");
+        txtTime.putClientProperty("JTextField.placeholderText", "HH-MM");
+        txtDate.setToolTipText("Appointment date: YYYY-MM-DD");
+        txtTime.setToolTipText("24-hour time: HH-MM, for example 14-30");
         txtReason.putClientProperty("JTextField.placeholderText", "Reason for visit");
 
         JPanel form = new JPanel(new GridBagLayout());
@@ -65,7 +67,7 @@ public class AppointmentPanel extends JPanel implements GuiUtil.Refreshable {
         JPanel recordsCard = Theme.card(new BorderLayout(0, 14));
         JPanel recordsHeader = new JPanel(new BorderLayout(0, 12));recordsHeader.setOpaque(false);
         JPanel recordTitle = new JPanel(new BorderLayout());recordTitle.setOpaque(false);
-        recordTitle.add(Theme.label("Appointments", 18, Theme.INK, true), BorderLayout.WEST);
+        recordTitle.add(Theme.label("Appointments", 20, Theme.INK, true), BorderLayout.WEST);
         recordTitle.add(recordsCount, BorderLayout.EAST);
         recordsHeader.add(recordTitle, BorderLayout.NORTH);
         recordsHeader.add(GuiUtil.searchBar(txtSearch, btnSearch, btnAll), BorderLayout.SOUTH);
@@ -186,7 +188,7 @@ public class AppointmentPanel extends JPanel implements GuiUtil.Refreshable {
         GuiUtil.select(cmbDoctor, GuiUtil.str(model.getValueAt(r, 2)));
         txtDate.setText(GuiUtil.str(model.getValueAt(r, 3)));
         String t = GuiUtil.str(model.getValueAt(r, 4));
-        txtTime.setText(t.length() >= 5 ? t.substring(0, 5) : t);
+        txtTime.setText((t.length() >= 5 ? t.substring(0, 5) : t).replace(':', '-'));
         cmbStatus.setSelectedItem(GuiUtil.str(model.getValueAt(r, 5)));
         txtReason.setText(GuiUtil.str(model.getValueAt(r, 6)));
     }

@@ -2,6 +2,7 @@ package dao;
 
 import database.DBConnection;
 import security.*;
+import validation.PatientInputs;
 import java.sql.*;
 import java.util.List;
 
@@ -10,10 +11,11 @@ public class PatientDAO {
     public void insert(String first, String last, Date birth, String sex,
                        String contact, String address, String email) throws SQLException {
         Session.require(Session.current().role.registersPatients());
+        String phone = PatientInputs.contact(contact);
         String sql = "INSERT INTO patients (first_name,last_name,birth_date,sex,contact_number,address,email) "
                    + "VALUES (?,?,?,?,?,?,?)";
         try (Connection c = DBConnection.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
-            bind(ps, first, last, birth, sex, contact, address, email);
+            bind(ps, first, last, birth, sex, phone, address, email);
             ps.executeUpdate();
         }
     }
@@ -21,10 +23,11 @@ public class PatientDAO {
     public void update(int id, String first, String last, Date birth, String sex,
                        String contact, String address, String email) throws SQLException {
         Session.require(Session.current().role.registersPatients());
+        String phone = PatientInputs.contact(contact);
         String sql = "UPDATE patients SET first_name=?, last_name=?, birth_date=?, sex=?, "
                    + "contact_number=?, address=?, email=? WHERE patient_id=?";
         try (Connection c = DBConnection.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
-            bind(ps, first, last, birth, sex, contact, address, email);
+            bind(ps, first, last, birth, sex, phone, address, email);
             ps.setInt(8, id);
             ps.executeUpdate();
         }

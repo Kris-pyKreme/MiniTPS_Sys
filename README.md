@@ -4,9 +4,9 @@ A light desktop workspace for patient registration, appointments, consultations,
 
 ## Interface previews
 
-The desktop interface uses bundled Lato typography, neutral cards, and teal navigation accents. These are screenshots of the running Swing application.
+The desktop interface uses bundled Lato typography, neutral cards, and teal navigation accents. These are screenshots of the running Swing application using fictional demonstration records in a disposable test database.
 
-[Sign in](docs/screenshots/sign-in.png) · [Overview](docs/screenshots/overview.png) · [Patients](docs/screenshots/patients.png) · [Appointments](docs/screenshots/appointments.png) · [Consultations](docs/screenshots/consultations.png) · [Billing](docs/screenshots/billing.png) · [Staff](docs/screenshots/staff.png) · [Profile](docs/screenshots/profile.png)
+[Sign in](docs/screenshots/sign-in.png) · [Overview](docs/screenshots/overview.png) · [Patients](docs/screenshots/patients.png) · [Appointments](docs/screenshots/appointments.png) · [Booked On / horizontal scroll](docs/screenshots/appointments-booked-on.png) · [Consultations](docs/screenshots/consultations.png) · [Billing](docs/screenshots/billing.png) · [Staff](docs/screenshots/staff.png) · [Profile](docs/screenshots/profile.png)
 
 ## Run in NetBeans with XAMPP
 
@@ -22,6 +22,10 @@ The first launch performs an additive upgrade of `staff_users` and creates `pass
 The sign-in screen uses a centered white card on a pale teal background, with bundled Lato regular/bold typography and drawn icons. Typing does not resize or maximize the login window. Inputs use their font metrics, actual padding, and display scale to keep typed text fully visible.
 
 Alternative connection settings, in priority order: Java properties `clinic.db.url`, `clinic.db.user`, `clinic.db.password`; environment variables `CLINIC_DB_URL`, `CLINIC_DB_USER`, `CLINIC_DB_PASSWORD`; then `db.properties`. Use `-Dclinic.config=/path/to/db.properties` to select another configuration file. Passwords belong in local configuration, never in source control. The app uses Philippine time (`Asia/Manila`) for its calendar and timestamps.
+
+Form dates use the visible guide **YYYY-MM-DD**. Appointment time uses **HH-MM** in 24-hour time, such as `14-30`; existing colon input such as `14:30` is also accepted. Java retains calendar-year and minute parsing internally. Patient contact numbers, when provided, must be exactly 10 digits beginning with **9**, such as `9123456789`. Existing stored numbers are not bulk-modified.
+
+The Patients, Appointments, Consultations, and Billing search controls are aligned on the left. Record tables use larger text, readable column widths, resizable columns, and horizontal scrollbars so timestamps such as **Booked On** can be read in full. Hover over long values for their complete contents.
 
 ## Role workspaces
 
@@ -63,7 +67,7 @@ mvn -Dclinic.integration=true -Dclinic.ui.tests=true \
 
 Provide the test database credentials using the same configuration mechanisms above. These tests refuse databases whose names do not end in `_test`. They create and clean `IT_` patient fixtures and `it_` staff fixtures; use a dedicated test database. UI tests require a real display or Xvfb. Omit `-Dclinic.ui.tests=true` for database-only checks. Tests cover role matching, denied operations, doctor isolation, password requests and resets, session invalidation, double booking, consultation transactions, billing totals, and the login and role-specific screens.
 
-`mvn -Dclinic.ui.tests=true -Dtest=LoginInteractionTest,InputLayoutTest test` runs the desktop input checks without a database. They check that typing preserves the window size and inputs, password visibility works, and editors have room for their full text lines. Run the layout checks with `-DargLine=-Dflatlaf.uiScale=1.25x` (or `1.5x` / `2x`) to exercise larger display scales in a fresh JVM.
+`mvn -Dclinic.ui.tests=true -Dtest=LoginInteractionTest,InputLayoutTest,RecordTableLayoutTest test` runs the desktop input checks without a database. They check that typing preserves the window size and inputs, password visibility works, and editors have room for their full text lines. Run the layout checks with `-DargLine=-Dflatlaf.uiScale=1.25x` (or `1.5x` / `2x`) to exercise larger display scales in a fresh JVM.
 
 The cloud development setup stores tools in `/workspace/.clinic-tools`; source its `env.sh` and run `start-services.sh` before building. Use its Maven settings and local repository when running in this cloud environment. Xvfb validates the desktop interface but does not provide an interactive web preview.
 

@@ -82,12 +82,20 @@ public final class Theme {
     public static void polish(Container root){
         for(Component c:root.getComponents()){
             if(c instanceof JTable){
-                JTable t=(JTable)c;t.setRowHeight(42);t.setShowVerticalLines(false);t.setShowHorizontalLines(true);
+                JTable t=(JTable)c;t.setFont(font(15,false));t.setRowHeight(Math.max(46,t.getFontMetrics(t.getFont()).getHeight()+16));t.setShowVerticalLines(false);t.setShowHorizontalLines(true);
+                t.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
                 t.setIntercellSpacing(new Dimension(0,1));t.setFillsViewportHeight(true);t.setBackground(WHITE);
-                t.getTableHeader().setFont(font(13,true));t.getTableHeader().setPreferredSize(new Dimension(0,40));t.getTableHeader().setReorderingAllowed(false);
+                t.getTableHeader().setFont(font(14,true));t.getTableHeader().setPreferredSize(new Dimension(0,46));t.getTableHeader().setReorderingAllowed(false);
+                for(int i=0;i<t.getColumnModel().getColumnCount();i++){
+                    javax.swing.table.TableColumn column=t.getColumnModel().getColumn(i);
+                    String title=String.valueOf(column.getHeaderValue());
+                    int minimum=t.getTableHeader().getFontMetrics(t.getTableHeader().getFont()).stringWidth(title)+28;
+                    int width=Math.max(recordColumnWidth(title),minimum);
+                    column.setMinWidth(Math.max(64,minimum));column.setPreferredWidth(width);column.setWidth(width);
+                }
                 t.setDefaultRenderer(Object.class,new DefaultTableCellRenderer(){
                     @Override public Component getTableCellRendererComponent(JTable table,Object value,boolean selected,boolean focus,int row,int col){
-                        super.getTableCellRendererComponent(table,value,selected,focus,row,col);setBorder(new EmptyBorder(0,12,0,12));setFont(font(13,false));
+                        super.getTableCellRendererComponent(table,value,selected,focus,row,col);setBorder(new EmptyBorder(7,12,7,12));setFont(font(15,selected));
                         String text=value==null?"":value.toString();
                         setToolTipText(text.isEmpty()?null:"<html><div style='width: 420px'>"+text.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace("\n","<br>")+"</div></html>");return this;
                     }
@@ -95,7 +103,7 @@ public final class Theme {
             }
             if(c instanceof JScrollPane){
                 JScrollPane s=(JScrollPane)c;s.getViewport().setBackground(WHITE);
-                if(s.getViewport().getView() instanceof JTable)s.setBorder(BorderFactory.createEmptyBorder());
+                if(s.getViewport().getView() instanceof JTable){s.setBorder(BorderFactory.createEmptyBorder());s.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_ALWAYS);}
                 else if(s.getViewport().getView() instanceof javax.swing.text.JTextComponent){
                     s.setBorder(new CompoundBorder(new RoundedBorder(LINE,12),new EmptyBorder(6,8,6,8)));
                     s.getViewport().getView().setFont(font(14,false));
@@ -107,6 +115,18 @@ public final class Theme {
             }
             if(c instanceof Container)polish((Container)c);
         }
+    }
+    private static int recordColumnWidth(String title){
+        String name=title.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z]","");
+        if(name.equals("id")||name.endsWith("id")||name.equals("request"))return 84;
+        if(name.equals("bookedon")||name.equals("registered")||name.equals("recorded")||name.equals("billedon")||name.equals("requestedon"))return 220;
+        if(name.equals("patient")||name.equals("doctor")||name.equals("fullname")||name.equals("linkeddoctor"))return 220;
+        if(name.equals("address")||name.equals("email")||name.equals("diagnosis")||name.equals("treatmentnotes")||name.equals("prescription")||name.equals("reason"))return 260;
+        if(name.equals("date")||name.equals("birthdate"))return 140;
+        if(name.equals("time"))return 120;
+        if(name.equals("sex"))return 100;
+        if(name.equals("contact")||name.equals("username"))return 170;
+        return 150;
     }
     private static class RoundedPanel extends JPanel {
         private final int radius;

@@ -64,7 +64,7 @@ public class ConsultationPanel extends JPanel implements GuiUtil.Refreshable {
         JPanel recordsCard = Theme.card(new BorderLayout(0, 14));
         JPanel recordsHeader = new JPanel(new BorderLayout(0, 12));recordsHeader.setOpaque(false);
         JPanel recordTitle = new JPanel(new BorderLayout());recordTitle.setOpaque(false);
-        recordTitle.add(Theme.label("Consultation records", 18, Theme.INK, true), BorderLayout.WEST);
+        recordTitle.add(Theme.label("Consultation records", 20, Theme.INK, true), BorderLayout.WEST);
         recordTitle.add(recordsCount, BorderLayout.EAST);
         recordsHeader.add(recordTitle, BorderLayout.NORTH);
         recordsHeader.add(GuiUtil.searchBar(txtSearch, btnSearch, btnAll), BorderLayout.SOUTH);
