@@ -40,13 +40,21 @@ public final class Theme {
         UIManager.put("Button.margin",new Insets(10,16,10,16));UIManager.put("Button.foreground",INK);UIManager.put("Button.background",WHITE);
         UIManager.put("Button.focusedBorderColor",TEAL);UIManager.put("Button.default.background",TEAL);UIManager.put("Button.default.foreground",WHITE);
         UIManager.put("Button.default.borderColor",TEAL);UIManager.put("Button.default.focusedBorderColor",TEAL);UIManager.put("Button.default.hoverBorderColor",TEAL);UIManager.put("Button.default.focusColor",PALE);
-        UIManager.put("TextField.margin",new Insets(10,12,10,12));UIManager.put("PasswordField.margin",new Insets(10,12,10,12));
+        UIManager.put("TextField.margin",new Insets(5,12,5,12));UIManager.put("PasswordField.margin",new Insets(5,12,5,12));
         UIManager.put("ComboBox.padding",new Insets(9,12,9,12));UIManager.put("ComboBox.background",WHITE);
         UIManager.put("CheckBox.icon.selectedBackground",TEAL);UIManager.put("CheckBox.icon.selectedBorderColor",TEAL);
         UIManager.put("OptionPane.background",WHITE);
     }
     public static JLabel label(String text,int size,Color color,boolean bold){
         JLabel l=new JLabel(text);l.setFont(font(size,bold));l.setForeground(color);return l;
+    }
+    /** Include the actual editor insets and native UI size, including display scaling. */
+    public static int controlHeight(JComponent input,int minimum){
+        // Ask the UI directly so a previously assigned preferred size cannot hide a short editor.
+        Dimension nativeSize=input.getUI()==null?null:input.getUI().getPreferredSize(input);
+        Insets insets=input.getInsets();
+        int line=input.getFontMetrics(input.getFont()).getHeight()+insets.top+insets.bottom+2;
+        return Math.max(minimum,Math.max(line,nativeSize==null?0:nativeSize.height));
     }
     public static JButton primary(String text){
         JButton b=new JButton(text);b.setBackground(TEAL);b.setForeground(WHITE);b.setFont(font(15,true));return b;
@@ -55,7 +63,9 @@ public final class Theme {
         JButton b=new JButton(text);b.setBackground(WHITE);b.setForeground(INK);b.setFont(font(15,false));return b;
     }
     public static JButton iconButton(String icon,String description){
-        JButton b=quiet("");b.setIcon(new LineIcon(icon,19,INK));b.setPreferredSize(new Dimension(42,40));
+        JButton b=quiet("");b.setIcon(new LineIcon(icon,19,INK));b.setMargin(new Insets(6,8,6,8));
+        Dimension natural=b.getUI().getPreferredSize(b);int height=controlHeight(b,40);
+        b.setPreferredSize(new Dimension(Math.max(42,natural.width),height));
         b.setToolTipText(description);b.getAccessibleContext().setAccessibleName(description);return b;
     }
     public static JPanel card(LayoutManager layout){return surface(layout,WHITE,20,20);}
@@ -77,7 +87,9 @@ public final class Theme {
                 t.getTableHeader().setFont(font(13,true));t.getTableHeader().setPreferredSize(new Dimension(0,40));t.getTableHeader().setReorderingAllowed(false);
                 t.setDefaultRenderer(Object.class,new DefaultTableCellRenderer(){
                     @Override public Component getTableCellRendererComponent(JTable table,Object value,boolean selected,boolean focus,int row,int col){
-                        super.getTableCellRendererComponent(table,value,selected,focus,row,col);setBorder(new EmptyBorder(0,12,0,12));setFont(font(13,false));return this;
+                        super.getTableCellRendererComponent(table,value,selected,focus,row,col);setBorder(new EmptyBorder(0,12,0,12));setFont(font(13,false));
+                        String text=value==null?"":value.toString();
+                        setToolTipText(text.isEmpty()?null:"<html><div style='width: 420px'>"+text.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace("\n","<br>")+"</div></html>");return this;
                     }
                 });
             }

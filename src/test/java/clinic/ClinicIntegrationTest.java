@@ -158,7 +158,9 @@ class ClinicIntegrationTest {
         for(User user:new User[]{admin,doctor,nurse,receptionist}){
             Session.login(user);
             SwingUtilities.invokeAndWait(()->{
-                MainFrame f=new MainFrame();f.setVisible(true);
+                MainFrame f=new MainFrame();f.setVisible(true);f.validate();
+                JButton signOut=(JButton)find(f,"signOut");
+                assertTrue(signOut.getWidth()>=signOut.getUI().getPreferredSize(signOut).width,"Sign out label must fit for every role");
                 f.navigate("Patients");f.navigate("Appointments");f.navigate("My profile");
                 if(user.role.consults())f.navigate("Consultations");else assertThrows(SecurityException.class,()->f.navigate("Consultations"));
                 if(user.role.bills())f.navigate("Billing");else assertThrows(SecurityException.class,()->f.navigate("Billing"));

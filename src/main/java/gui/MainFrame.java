@@ -42,17 +42,19 @@ public class MainFrame extends JFrame {
             String icon=name.equals("Overview")?"overview":name.equals("Staff & requests")?"staff":name.toLowerCase(Locale.ROOT);
             JButton b=new JButton(name.equals("Staff & requests")?"Staff":name,new LineIcon(icon,20,Theme.MUTED));
             b.setName("nav-"+name);b.setFont(Theme.font(17,false));b.setIconTextGap(16);b.setHorizontalAlignment(SwingConstants.LEFT);b.setFocusPainted(true);b.setBorderPainted(false);
-            b.setMargin(new Insets(12,16,12,12));b.setBackground(Theme.WHITE);b.setForeground(Theme.MUTED);b.setMaximumSize(new Dimension(Integer.MAX_VALUE,52));b.setPreferredSize(new Dimension(220,52));b.setAlignmentX(0);
+            b.setMargin(new Insets(12,16,12,12));b.setBackground(Theme.WHITE);b.setForeground(Theme.MUTED);int height=Theme.controlHeight(b,52);b.setMinimumSize(new Dimension(0,height));b.setMaximumSize(new Dimension(Integer.MAX_VALUE,height));b.setPreferredSize(new Dimension(Math.max(220,b.getUI().getPreferredSize(b).width),height));b.setAlignmentX(0);
             b.addActionListener(e->navigate(name));navigation.put(name,b);menu.add(b);menu.add(Box.createVerticalStrut(7));
         }
-        menu.add(Box.createVerticalGlue());sidebar.add(menu,BorderLayout.CENTER);
-        JPanel bottom=Theme.column();JSeparator line=new JSeparator();line.setForeground(Theme.LINE);line.setMaximumSize(new Dimension(Integer.MAX_VALUE,1));bottom.add(line);bottom.add(Box.createVerticalStrut(18));
+        menu.add(Box.createVerticalGlue());
+        sidebar.setPreferredSize(new Dimension(Math.max(254,menu.getPreferredSize().width+32),0));
+        JScrollPane menuScroll=new JScrollPane(menu);menuScroll.setBorder(BorderFactory.createEmptyBorder());menuScroll.setOpaque(false);menuScroll.getViewport().setOpaque(false);menuScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);menuScroll.getVerticalScrollBar().setUnitIncrement(18);sidebar.add(menuScroll,BorderLayout.CENTER);
+        JPanel bottom=new JPanel(new BorderLayout(0,18));bottom.setOpaque(false);JSeparator line=new JSeparator();line.setForeground(Theme.LINE);bottom.add(line,BorderLayout.NORTH);
         JPanel identity=new JPanel(new BorderLayout(12,0));identity.setOpaque(false);identity.setMaximumSize(new Dimension(Integer.MAX_VALUE,54));
         JLabel avatar=new JLabel(initials(user.fullName),SwingConstants.CENTER);avatar.setFont(Theme.font(15,true));avatar.setForeground(Theme.TEAL);
         JPanel circle=Theme.surface(new BorderLayout(),Theme.PALE,48,0);circle.setBorder(BorderFactory.createEmptyBorder());circle.setPreferredSize(new Dimension(44,44));circle.add(avatar);identity.add(circle,BorderLayout.WEST);
         JButton profile=new JButton("<html><b>"+html(user.fullName)+"</b><br><font color='#60625F'>"+user.role+"</font></html>");
-        profile.setName("nav-My profile");profile.setFont(Theme.font(15,false));profile.setHorizontalAlignment(SwingConstants.LEFT);profile.setBorderPainted(false);profile.setContentAreaFilled(false);profile.setMargin(new Insets(0,0,0,0));profile.setToolTipText("My profile");profile.addActionListener(e->navigate("My profile"));identity.add(profile);bottom.add(identity);bottom.add(Box.createVerticalStrut(20));
-        JButton logout=Theme.quiet("Sign out");logout.setIcon(new LineIcon("logout",20,Theme.MUTED));logout.setIconTextGap(16);logout.setFont(Theme.font(17,false));logout.setForeground(Theme.MUTED);logout.setHorizontalAlignment(SwingConstants.LEFT);logout.setBorderPainted(false);logout.setMaximumSize(new Dimension(Integer.MAX_VALUE,44));logout.addActionListener(e->{if(GuiUtil.confirm(this,"Sign out of KlinikAccess?"))signOut();});bottom.add(logout);sidebar.add(bottom,BorderLayout.SOUTH);shell.add(sidebar,BorderLayout.WEST);
+        profile.setName("nav-My profile");profile.setFont(Theme.font(15,false));profile.setHorizontalAlignment(SwingConstants.LEFT);profile.setBorderPainted(false);profile.setContentAreaFilled(false);profile.setMargin(new Insets(0,0,0,0));profile.setToolTipText("My profile");profile.addActionListener(e->navigate("My profile"));identity.add(profile);bottom.add(identity,BorderLayout.CENTER);
+        JButton logout=Theme.quiet("Sign out");logout.setName("signOut");logout.setIcon(new LineIcon("logout",20,Theme.MUTED));logout.setIconTextGap(16);logout.setFont(Theme.font(17,false));logout.setForeground(Theme.MUTED);logout.setHorizontalAlignment(SwingConstants.LEFT);logout.setBorderPainted(false);int logoutHeight=Theme.controlHeight(logout,44);logout.setPreferredSize(new Dimension(Math.max(220,logout.getUI().getPreferredSize(logout).width),logoutHeight));logout.addActionListener(e->{if(GuiUtil.confirm(this,"Sign out of KlinikAccess?"))signOut();});bottom.add(logout,BorderLayout.SOUTH);sidebar.add(bottom,BorderLayout.SOUTH);shell.add(sidebar,BorderLayout.WEST);
         JPanel main=new JPanel(new BorderLayout(0,22));main.setOpaque(false);main.setBorder(BorderFactory.createEmptyBorder(28,28,26,28));
         JPanel header=new JPanel(new BorderLayout(12,0));header.setOpaque(false);JPanel titles=Theme.column();titles.add(heading);titles.add(Box.createVerticalStrut(7));titles.add(subheading);header.add(titles,BorderLayout.CENTER);
         JPanel actions=new JPanel(new FlowLayout(FlowLayout.RIGHT,10,4));actions.setOpaque(false);
@@ -103,11 +105,11 @@ public class MainFrame extends JFrame {
     /** Short laptop displays can scroll the page without crushing the records table. */
     private static class PageViewport extends JPanel implements Scrollable {
         PageViewport(JComponent content){super(new BorderLayout());setOpaque(false);add(content);}
-        @Override public Dimension getPreferredSize(){return new Dimension(super.getPreferredSize().width,620);}
+        @Override public Dimension getPreferredSize(){return new Dimension(super.getPreferredSize().width,Math.max(620,super.getMinimumSize().height));}
         @Override public Dimension getPreferredScrollableViewportSize(){return getPreferredSize();}
         @Override public int getScrollableUnitIncrement(Rectangle r,int orientation,int direction){return 18;}
         @Override public int getScrollableBlockIncrement(Rectangle r,int orientation,int direction){return Math.max(18,r.height-36);}
         @Override public boolean getScrollableTracksViewportWidth(){return true;}
-        @Override public boolean getScrollableTracksViewportHeight(){return getParent() instanceof JViewport&&getParent().getHeight()>=620;}
+        @Override public boolean getScrollableTracksViewportHeight(){return getParent() instanceof JViewport&&getParent().getHeight()>=getPreferredSize().height;}
     }
 }

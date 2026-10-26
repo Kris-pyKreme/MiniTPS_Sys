@@ -98,7 +98,8 @@ public class DashboardPanel extends JPanel implements GuiUtil.Refreshable {
         JButton next=iconButton(1,"Next month");
         JButton today=Theme.quiet("Today");
         today.setFont(Theme.font(15,false));
-        today.setPreferredSize(new Dimension(78,40));
+        today.setMargin(new Insets(6,12,6,12));
+        today.setPreferredSize(new Dimension(Math.max(78,today.getUI().getPreferredSize(today).width),Theme.controlHeight(today,40)));
         previous.addActionListener(e->move(-1));
         next.addActionListener(e->move(1));
         today.addActionListener(e->{selected=LocalDate.now();month=YearMonth.from(selected);renderCalendar();});
@@ -113,7 +114,8 @@ public class DashboardPanel extends JPanel implements GuiUtil.Refreshable {
         dateMode.setName("calendarDateMode");
         dateMode.setFont(Theme.font(12,false));
         dateMode.setToolTipText("Display visits by their appointment date or the date the booking was created");
-        dateMode.setPreferredSize(new Dimension(164,30));
+        int dateModeHeight=Theme.controlHeight(dateMode,30);
+        dateMode.setPreferredSize(new Dimension(Math.max(164,dateMode.getUI().getPreferredSize(dateMode).width),dateModeHeight));dateMode.setMinimumSize(new Dimension(100,dateModeHeight));
         dateMode.addActionListener(e->renderCalendar());
         calendarOptions.add(dateMode);
         card.add(calendarOptions,BorderLayout.SOUTH);
@@ -179,8 +181,8 @@ public class DashboardPanel extends JPanel implements GuiUtil.Refreshable {
     private JButton iconButton(int direction,String description) {
         JButton button=Theme.quiet("");
         button.setIcon(new ChevronIcon(direction,Theme.INK));
-        button.setPreferredSize(new Dimension(40,40));
         button.setMargin(new Insets(0,0,0,0));
+        button.setPreferredSize(new Dimension(40,Theme.controlHeight(button,40)));
         button.setToolTipText(description);
         button.getAccessibleContext().setAccessibleName(description);
         return button;

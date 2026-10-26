@@ -3,8 +3,6 @@ package gui;
 import security.*;
 import service.AccountService;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.KeyEvent;
 import java.util.Arrays;
 import javax.swing.*;
 
@@ -14,11 +12,7 @@ public class Login extends JFrame {
     private final JComboBox<Role> cmbRole=new JComboBox<>(Role.values());
     private final JButton btnLogin=Theme.primary("Sign in to your workspace");
     private final JLabel message=Theme.label(" ",12,new Color(0xB34747),false);
-    private final JButton restoreWindow=Theme.quiet("Restore window (Esc)");
     private final AccountService accounts=new AccountService();
-    private Timer boundsAnimation;
-    private Rectangle windowedBounds;
-    private boolean autoExpanded;
     private int failures;
     private long retryAfter;
 
@@ -44,46 +38,29 @@ public class Login extends JFrame {
         form.add(Theme.label("Sign in to continue caring for your community.",16,Theme.MUTED,false));form.add(Box.createVerticalStrut(26));
         field(form,"Your role",cmbRole);field(form,"Username",txtUser);field(form,"Password",txtPass);
         txtUser.putClientProperty("JTextField.placeholderText","Enter your username");txtPass.putClientProperty("JTextField.placeholderText","Enter your password");
-        JPanel options=new JPanel(new BorderLayout());options.setOpaque(false);options.setMaximumSize(new Dimension(Integer.MAX_VALUE,26));
-        JCheckBox show=new JCheckBox("Show password");show.setOpaque(false);show.setFont(Theme.font(14,false));show.setForeground(Theme.MUTED);
+        JPanel options=new JPanel(new BorderLayout());options.setOpaque(false);
+        JCheckBox show=new JCheckBox("Show password");show.setName("showPassword");show.setOpaque(false);show.setFont(Theme.font(14,false));show.setForeground(Theme.MUTED);
         char echo=txtPass.getEchoChar();show.addActionListener(e->txtPass.setEchoChar(show.isSelected()?(char)0:echo));options.add(show,BorderLayout.WEST);
         JButton forgot=new JButton("Forgot password?");forgot.setName("forgotPassword");forgot.setBorderPainted(false);forgot.setContentAreaFilled(false);
-        forgot.setForeground(Theme.TEAL);forgot.setFont(Theme.font(14,false));forgot.setMargin(new Insets(0,0,0,0));forgot.addActionListener(e->requestReset());options.add(forgot,BorderLayout.EAST);form.add(options);
+        forgot.setForeground(Theme.TEAL);forgot.setFont(Theme.font(14,false));forgot.setMargin(new Insets(0,0,0,0));forgot.addActionListener(e->requestReset());options.add(forgot,BorderLayout.EAST);
+        int optionsHeight=Math.max(26,Math.max(show.getPreferredSize().height,forgot.getPreferredSize().height));
+        options.setPreferredSize(new Dimension(520,optionsHeight));options.setMinimumSize(new Dimension(0,optionsHeight));options.setMaximumSize(new Dimension(Integer.MAX_VALUE,optionsHeight));form.add(options);
         message.setPreferredSize(new Dimension(520,23));message.setMaximumSize(new Dimension(Integer.MAX_VALUE,23));form.add(message);
         btnLogin.setText("Sign in to your workspace");btnLogin.setIcon(new LineIcon("arrow",18,Theme.WHITE));btnLogin.setHorizontalTextPosition(SwingConstants.LEFT);btnLogin.setIconTextGap(12);
-        btnLogin.setFont(Theme.font(17,true));btnLogin.setMaximumSize(new Dimension(Integer.MAX_VALUE,48));btnLogin.setPreferredSize(new Dimension(520,48));
+        btnLogin.setFont(Theme.font(17,true));int buttonHeight=Theme.controlHeight(btnLogin,48);
+        btnLogin.setMaximumSize(new Dimension(Integer.MAX_VALUE,buttonHeight));btnLogin.setMinimumSize(new Dimension(0,buttonHeight));btnLogin.setPreferredSize(new Dimension(520,buttonHeight));
         btnLogin.addActionListener(e->doLogin());form.add(btnLogin);form.add(Box.createVerticalStrut(20));
         JLabel accountNote=Theme.label("Staff accounts are managed by your clinic administrator.",13,new Color(0x8B8D88),false);
         accountNote.setHorizontalAlignment(SwingConstants.CENTER);accountNote.setMaximumSize(new Dimension(Integer.MAX_VALUE,22));form.add(accountNote);
         for(Component c:form.getComponents())if(c instanceof JComponent)((JComponent)c).setAlignmentX(0);
         card.add(form,BorderLayout.CENTER);stack.add(card);stack.add(Box.createVerticalStrut(16));
-        JPanel bottom=new JPanel(new GridLayout(2,1,0,2));bottom.setOpaque(false);bottom.setMaximumSize(new Dimension(Integer.MAX_VALUE,42));
+        JPanel bottom=new JPanel(new BorderLayout());bottom.setOpaque(false);bottom.setMaximumSize(new Dimension(Integer.MAX_VALUE,20));
         JLabel tagline=Theme.label("A LITTLE MORE CARE. EVERY DAY.",12,Theme.TEAL,true);tagline.setHorizontalAlignment(SwingConstants.CENTER);tagline.setFont(tagline.getFont().deriveFont(tracking));bottom.add(tagline);
-        JPanel windowControls=new JPanel(new FlowLayout(FlowLayout.CENTER,0,0));windowControls.setOpaque(false);
-        restoreWindow.setName("restoreLoginWindow");restoreWindow.setVisible(false);restoreWindow.setFont(Theme.font(11,false));restoreWindow.setForeground(Theme.TEAL);
-        restoreWindow.setMargin(new Insets(0,0,0,0));restoreWindow.setBorderPainted(false);restoreWindow.setContentAreaFilled(false);restoreWindow.addActionListener(e->restoreWindow());windowControls.add(restoreWindow);bottom.add(windowControls);stack.add(bottom);
+        stack.add(bottom);
         JPanel constrained=new JPanel(new BorderLayout());constrained.setOpaque(false);constrained.add(stack);constrained.setPreferredSize(new Dimension(600,stack.getPreferredSize().height));
         center.add(constrained);JScrollPane scroll=new JScrollPane(center);scroll.setBorder(BorderFactory.createEmptyBorder());scroll.setOpaque(false);scroll.getViewport().setOpaque(false);scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);scroll.getVerticalScrollBar().setUnitIncrement(16);
         backdrop.add(scroll);root.add(backdrop);setContentPane(root);getRootPane().setDefaultButton(btnLogin);
         txtUser.setName("username");txtPass.setName("password");cmbRole.setName("role");btnLogin.setName("signIn");
-        GuiUtil.onChange(txtUser,this::expandOnInput);
-        getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE,0),"restoreLoginWindow");
-        getRootPane().getActionMap().put("restoreLoginWindow",new AbstractAction(){
-            @Override public void actionPerformed(ActionEvent e){restoreWindow();}
-        });
-    }
-    /** Keep the existing fields and keyboard focus while the window grows around them. */
-    private void expandOnInput() {
-        if(autoExpanded || !isShowing() || txtUser.getDocument().getLength()==0)return;
-        autoExpanded=true;
-        if((getExtendedState() & MAXIMIZED_BOTH)!=0)return;
-        Rectangle target=availableScreenBounds();
-        if(getBounds().equals(target))return;
-        windowedBounds=getBounds();restoreWindow.setVisible(true);
-        // The user may have moved the login onto a smaller secondary monitor.
-        Dimension minimum=getMinimumSize();
-        setMinimumSize(new Dimension(Math.min(minimum.width,target.width),Math.min(minimum.height,target.height)));
-        animateBounds(target);
     }
     private Rectangle availableScreenBounds() {
         GraphicsConfiguration monitor=getGraphicsConfiguration();
@@ -93,35 +70,10 @@ public class Login extends JFrame {
         bounds.width=Math.max(1,bounds.width-insets.left-insets.right);bounds.height=Math.max(1,bounds.height-insets.top-insets.bottom);
         return bounds;
     }
-    private void restoreWindow() {
-        if(windowedBounds==null)return;
-        // The one-shot flag stays set: Escape must not cause expansion on the next keystroke.
-        Rectangle target=windowedBounds;windowedBounds=null;restoreWindow.setVisible(false);
-        if((getExtendedState() & MAXIMIZED_BOTH)!=0)setExtendedState(NORMAL);
-        animateBounds(target);
-    }
-    private void animateBounds(Rectangle target) {
-        if(boundsAnimation!=null)boundsAnimation.stop();
-        Rectangle start=getBounds();long started=System.nanoTime();
-        boundsAnimation=new Timer(16,e->{
-            if(e.getSource()!=boundsAnimation)return;
-            if(!isShowing()){boundsAnimation.stop();boundsAnimation=null;return;}
-            double progress=Math.min(1,(System.nanoTime()-started)/460_000_000.0);
-            double eased=progress*progress*(3-2*progress);
-            setBounds(interpolate(start.x,target.x,eased),interpolate(start.y,target.y,eased),
-                    interpolate(start.width,target.width,eased),interpolate(start.height,target.height,eased));
-            if(progress>=1){boundsAnimation.stop();boundsAnimation=null;}
-        });
-        boundsAnimation.setCoalesce(true);boundsAnimation.start();
-    }
-    private int interpolate(int from,int to,double progress){return (int)Math.round(from+(to-from)*progress);}
-    @Override public void dispose(){
-        if(boundsAnimation!=null){boundsAnimation.stop();boundsAnimation=null;}
-        super.dispose();
-    }
     private void field(JPanel panel,String label,JComponent field) {
         panel.add(Theme.label(label,15,Theme.INK,true));panel.add(Box.createVerticalStrut(6));
-        field.setFont(Theme.font(18,false));field.setPreferredSize(new Dimension(520,44));field.setMaximumSize(new Dimension(Integer.MAX_VALUE,44));
+        field.setFont(Theme.font(18,false));int height=Theme.controlHeight(field,44);
+        field.setPreferredSize(new Dimension(520,height));field.setMinimumSize(new Dimension(80,height));field.setMaximumSize(new Dimension(Integer.MAX_VALUE,height));
         panel.add(field);panel.add(Box.createVerticalStrut(16));
     }
     private void doLogin() {

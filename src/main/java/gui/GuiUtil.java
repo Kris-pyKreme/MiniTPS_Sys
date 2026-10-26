@@ -66,8 +66,11 @@ public class GuiUtil {
         g.fill = GridBagConstraints.HORIZONTAL;
         g.weightx = 1;
         field.setFont(Theme.font(14,false));
-        if(field instanceof JTextField)field.setPreferredSize(new Dimension(160,38));
-        if(field instanceof JComboBox){field.setMinimumSize(new Dimension(80,38));field.setPreferredSize(new Dimension(180,38));}
+        if(field instanceof JTextField || field instanceof JComboBox){
+            int height=Theme.controlHeight(field,38);
+            field.setPreferredSize(new Dimension(field instanceof JTextField?160:180,height));
+            field.setMinimumSize(new Dimension(80,height));
+        }
         if(field instanceof JScrollPane && ((JScrollPane)field).getViewport().getView() instanceof JTextArea){
             field.setPreferredSize(new Dimension(180,72));field.setMinimumSize(new Dimension(90,72));
         }
@@ -88,7 +91,8 @@ public class GuiUtil {
 
     public static JPanel searchBar(JTextField txt, JButton... buttons) {
         JPanel p=new JPanel(new FlowLayout(FlowLayout.RIGHT,8,0));p.setOpaque(false);
-        txt.putClientProperty("JTextField.placeholderText","Search records");txt.setPreferredSize(new Dimension(210,38));
+        txt.putClientProperty("JTextField.placeholderText","Search records");
+        int height=Theme.controlHeight(txt,38);txt.setPreferredSize(new Dimension(210,height));txt.setMinimumSize(new Dimension(80,height));
         txt.setColumns(16);if(buttons.length>0)txt.addActionListener(e->buttons[0].doClick());p.add(txt);
         for(JButton button:buttons){button.setFont(Theme.font(13,false));p.add(button);}return p;
     }
