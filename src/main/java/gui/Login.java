@@ -3,6 +3,8 @@ package gui;
 import security.*;
 import service.AccountService;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
 import java.util.Arrays;
 import javax.swing.*;
 
@@ -12,13 +14,20 @@ public class Login extends JFrame {
     private final JComboBox<Role> cmbRole=new JComboBox<>(Role.values());
     private final JButton btnLogin=Theme.primary("Sign in to your workspace   →");
     private final JLabel message=Theme.label(" ",12,new Color(0xB34747),false);
+    private final JButton restoreWindow=Theme.quiet("Restore window (Esc)");
     private final AccountService accounts=new AccountService();
+    private Timer boundsAnimation;
+    private Rectangle windowedBounds;
+    private boolean autoExpanded;
     private int failures;
     private long retryAfter;
 
     public Login() {
         super("ClinicFlow · Staff sign in");
-        setDefaultCloseOperation(EXIT_ON_CLOSE); setSize(1040,650); setMinimumSize(new Dimension(930,620)); setLocationRelativeTo(null);
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        Rectangle available=availableScreenBounds();
+        setMinimumSize(new Dimension(Math.min(930,available.width),Math.min(620,available.height)));
+        setSize(Math.min(1040,available.width),Math.min(650,available.height));setLocationRelativeTo(null);
         JPanel root=new JPanel(new GridLayout(1,2)); root.setBackground(Color.WHITE);
         JPanel brand=new JPanel(new BorderLayout(0,18)); brand.setBackground(new Color(0xEDF7F4)); brand.setBorder(BorderFactory.createEmptyBorder(38,38,30,38));
         JPanel logo=new JPanel(new FlowLayout(FlowLayout.LEFT,10,0)); logo.setOpaque(false);
@@ -43,9 +52,67 @@ public class Login extends JFrame {
         message.setPreferredSize(new Dimension(350,36));message.setMaximumSize(new Dimension(400,36));form.add(message);
         btnLogin.setMaximumSize(new Dimension(Integer.MAX_VALUE,46));btnLogin.setAlignmentX(0);btnLogin.addActionListener(e->doLogin());form.add(btnLogin);form.add(Box.createVerticalStrut(21));
         form.add(Theme.label("Staff accounts are managed by your clinic administrator.",10,Theme.MUTED,false));
+        JPanel windowControls=new JPanel(new FlowLayout(FlowLayout.LEFT,0,0));windowControls.setOpaque(false);
+        windowControls.setPreferredSize(new Dimension(350,30));windowControls.setMaximumSize(new Dimension(Integer.MAX_VALUE,30));
+        restoreWindow.setName("restoreLoginWindow");restoreWindow.setVisible(false);
+        restoreWindow.setFont(restoreWindow.getFont().deriveFont(11f));restoreWindow.setMargin(new Insets(5,0,0,0));
+        restoreWindow.setBorderPainted(false);restoreWindow.setContentAreaFilled(false);restoreWindow.addActionListener(e->restoreWindow());
+        windowControls.add(restoreWindow);form.add(windowControls);
         for(Component c:form.getComponents()) if(c instanceof JComponent)((JComponent)c).setAlignmentX(0);
         right.add(form);root.add(right);setContentPane(root);getRootPane().setDefaultButton(btnLogin);
         txtUser.setName("username");txtPass.setName("password");cmbRole.setName("role");btnLogin.setName("signIn");
+        GuiUtil.onChange(txtUser,this::expandOnInput);
+        getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE,0),"restoreLoginWindow");
+        getRootPane().getActionMap().put("restoreLoginWindow",new AbstractAction(){
+            @Override public void actionPerformed(ActionEvent e){restoreWindow();}
+        });
+    }
+    /** Keep the existing fields and keyboard focus while the window grows around them. */
+    private void expandOnInput() {
+        if(autoExpanded || !isShowing() || txtUser.getDocument().getLength()==0)return;
+        autoExpanded=true;
+        if((getExtendedState() & MAXIMIZED_BOTH)!=0)return;
+        Rectangle target=availableScreenBounds();
+        if(getBounds().equals(target))return;
+        windowedBounds=getBounds();restoreWindow.setVisible(true);
+        // The user may have moved the login onto a smaller secondary monitor.
+        Dimension minimum=getMinimumSize();
+        setMinimumSize(new Dimension(Math.min(minimum.width,target.width),Math.min(minimum.height,target.height)));
+        animateBounds(target);
+    }
+    private Rectangle availableScreenBounds() {
+        GraphicsConfiguration monitor=getGraphicsConfiguration();
+        if(monitor==null)monitor=GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDefaultConfiguration();
+        Rectangle bounds=new Rectangle(monitor.getBounds());Insets insets=Toolkit.getDefaultToolkit().getScreenInsets(monitor);
+        bounds.x+=insets.left;bounds.y+=insets.top;
+        bounds.width=Math.max(1,bounds.width-insets.left-insets.right);bounds.height=Math.max(1,bounds.height-insets.top-insets.bottom);
+        return bounds;
+    }
+    private void restoreWindow() {
+        if(windowedBounds==null)return;
+        // The one-shot flag stays set: Escape must not cause expansion on the next keystroke.
+        Rectangle target=windowedBounds;windowedBounds=null;restoreWindow.setVisible(false);
+        if((getExtendedState() & MAXIMIZED_BOTH)!=0)setExtendedState(NORMAL);
+        animateBounds(target);
+    }
+    private void animateBounds(Rectangle target) {
+        if(boundsAnimation!=null)boundsAnimation.stop();
+        Rectangle start=getBounds();long started=System.nanoTime();
+        boundsAnimation=new Timer(16,e->{
+            if(e.getSource()!=boundsAnimation)return;
+            if(!isShowing()){boundsAnimation.stop();boundsAnimation=null;return;}
+            double progress=Math.min(1,(System.nanoTime()-started)/460_000_000.0);
+            double eased=progress*progress*(3-2*progress);
+            setBounds(interpolate(start.x,target.x,eased),interpolate(start.y,target.y,eased),
+                    interpolate(start.width,target.width,eased),interpolate(start.height,target.height,eased));
+            if(progress>=1){boundsAnimation.stop();boundsAnimation=null;}
+        });
+        boundsAnimation.setCoalesce(true);boundsAnimation.start();
+    }
+    private int interpolate(int from,int to,double progress){return (int)Math.round(from+(to-from)*progress);}
+    @Override public void dispose(){
+        if(boundsAnimation!=null){boundsAnimation.stop();boundsAnimation=null;}
+        super.dispose();
     }
     private void field(JPanel p,String label,JComponent field) {
         p.add(Theme.label(label,12,Theme.INK,true));p.add(Box.createVerticalStrut(7));

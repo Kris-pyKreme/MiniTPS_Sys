@@ -13,6 +13,8 @@ A light desktop workspace for patient registration, appointments, consultations,
 
 The first launch performs an additive upgrade of `staff_users` and creates `password_requests`. The database user needs CREATE and ALTER privileges for this first launch. Existing patient records, staff passwords, and clinic transactions are retained. Legacy SHA-256 passwords are upgraded to salted PBKDF2 after a successful login. Do not reimport `schema.sql` into an existing database to upgrade: its doctor seed statements append rows. `staff_users.sql` preserves existing accounts on reimport.
 
+The login includes a gently animated clinic illustration. The first username input smoothly expands the login to fill the current monitor's available screen area, keeping the taskbar accessible and preserving the fields and keyboard focus. Press **Esc** or click **Restore window (Esc)** to return to the original size. Automatic expansion happens once per login window, so continuing to type after restoring will not expand it again.
+
 Alternative connection settings, in priority order: Java properties `clinic.db.url`, `clinic.db.user`, `clinic.db.password`; environment variables `CLINIC_DB_URL`, `CLINIC_DB_USER`, `CLINIC_DB_PASSWORD`; then `db.properties`. Use `-Dclinic.config=/path/to/db.properties` to select another configuration file. Passwords belong in local configuration, never in source control. The app uses Philippine time (`Asia/Manila`) for its calendar and timestamps.
 
 ## Role workspaces
@@ -54,5 +56,7 @@ mvn -Dclinic.integration=true -Dclinic.ui.tests=true \
 ```
 
 Provide the test database credentials using the same configuration mechanisms above. These tests refuse databases whose names do not end in `_test`. They create and clean `IT_` patient fixtures and `it_` staff fixtures; use a dedicated test database. UI tests require a real display or Xvfb. Omit `-Dclinic.ui.tests=true` for database-only checks. Tests cover role matching, denied operations, doctor isolation, password requests and resets, session invalidation, double booking, consultation transactions, billing totals, and the login and role-specific screens.
+
+`mvn -Dclinic.ui.tests=true -Dtest=LoginAnimationTest test` runs just the desktop animation checks without a database. These use real key events to check expansion, preserved input/focus, Escape restoration, and cancellation when the login closes.
 
 The cloud development setup stores tools in `/workspace/.clinic-tools`; source its `env.sh` and run `start-services.sh` before building. Use its Maven settings and local repository when running in this cloud environment. Xvfb validates the desktop interface but does not provide an interactive web preview.
